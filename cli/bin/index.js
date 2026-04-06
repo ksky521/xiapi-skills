@@ -17,5 +17,6 @@ require('../commands/kline')(program);
 require('../commands/zdt')(program);
 require('../commands/secid')(program);
 require('../commands/search')(program);
+require('../commands/dividend')(program);
 
 program.parse(process.argv);
