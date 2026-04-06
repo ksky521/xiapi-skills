@@ -125,9 +125,5 @@ module.exports = {
     getKline,
     getZdtPool,
     queryStockData,
-<<<<<<< HEAD
-    getMarketReview
-=======
     getPatternStocks
->>>>>>> dc55f8784692feb918084c317fd6708b0b713eae
 };
