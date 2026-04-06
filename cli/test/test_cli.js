@@ -2,18 +2,18 @@
 
 /**
  * CLI接口完整测试用例
- * 
+ *
  * 测试范围：
  * 1. 所有CLI命令和子命令
  * 2. 所有参数组合（除了limit/lmt参数）
  * 3. 错误处理和边界情况
  * 4. Token验证和权限检查
- * 
+ *
  * 使用方法：
  * node test_cli.js <your_token>
  */
 
-const { execSync } = require('child_process');
+const {execSync} = require('child_process');
 const fs = require('fs');
 
 // 测试配置
@@ -42,13 +42,17 @@ function runTest(testName, command, expectSuccess = true) {
     try {
         log(`\n测试: ${testName}`, 'cyan');
         log(`命令: daxiapi ${command}`, 'blue');
-        
+
         const result = execSync(`daxiapi ${command}`, {
             encoding: 'utf-8',
             timeout: 30000,
-            env: { ...process.env }
+            env: {
+                ...process.env,
+                DAXIAPI_TOKEN: CONFIG.token
+            },
+            stdio: 'pipe'
         });
-        
+
         if (expectSuccess) {
             log('✅ 通过', 'green');
             CONFIG.passCount++;
@@ -68,9 +72,11 @@ function runTest(testName, command, expectSuccess = true) {
                 reason: 'Expected failure but succeeded'
             });
         }
-        
+
         return true;
     } catch (error) {
+        const errorMsg = error.stderr || error.stdout || error.message;
+
         if (!expectSuccess) {
             log('✅ 通过（预期失败）', 'green');
             CONFIG.passCount++;
@@ -81,16 +87,18 @@ function runTest(testName, command, expectSuccess = true) {
                 reason: 'Expected failure'
             });
         } else {
-            log(`❌ 失败: ${error.message}`, 'red');
+            log(`❌ 失败: ${errorMsg}`, 'red');
             CONFIG.failCount++;
             CONFIG.testResults.push({
                 name: testName,
                 command: command,
                 status: 'FAIL',
-                error: error.message
+                error: errorMsg,
+                stdout: error.stdout,
+                stderr: error.stderr
             });
         }
-        
+
         return false;
     }
 }
@@ -102,7 +110,7 @@ function validateToken() {
         log('使用方法: node test_cli.js <your_token>', 'yellow');
         process.exit(1);
     }
-    
+
     log('\n========================================', 'cyan');
     log('CLI接口完整测试', 'cyan');
     log('========================================', 'cyan');
@@ -115,16 +123,16 @@ function testConfigCommands() {
     log('\n========================================', 'cyan');
     log('测试配置命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 设置Token
     runTest('设置Token', `config set token ${CONFIG.token}`);
-    
+
     // 获取Token
     runTest('获取Token', 'config get token');
-    
+
     // 设置baseUrl
     runTest('设置baseUrl', 'config set baseUrl https://daxiapi.com');
-    
+
     // 获取baseUrl
     runTest('获取baseUrl', 'config get baseUrl');
 }
@@ -134,16 +142,16 @@ function testMarketCommands() {
     log('\n========================================', 'cyan');
     log('测试市场数据命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // market index
     runTest('获取市场指数数据', 'market index');
-    
+
     // market temp
     runTest('获取市场温度数据', 'market temp');
-    
+
     // market style
     runTest('获取市场风格数据', 'market style');
-    
+
     // market value
     runTest('获取市场估值数据', 'market value');
 }
@@ -153,15 +161,15 @@ function testSectorCommands() {
     log('\n========================================', 'cyan');
     log('测试板块数据命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // sector heatmap - 测试不同的order参数
     runTest('获取板块热力图（默认排序）', 'sector heatmap');
     runTest('获取板块热力图（按CS排序）', 'sector heatmap --order cs');
     runTest('获取板块热力图（按涨跌幅排序）', 'sector heatmap --order zdf');
-    
+
     // sector bk
     runTest('获取行业板块数据', 'sector bk');
-    
+
     // sector stocks - 测试不同的code和order参数
     runTest('获取板块内股票（BK格式）', 'sector stocks --code BK0428');
     runTest('获取板块内股票（纯数字格式）', 'sector stocks --code 0428');
@@ -171,10 +179,10 @@ function testSectorCommands() {
     runTest('获取板块内股票（按市值排序）', 'sector stocks --code BK0428 --order sm');
     runTest('获取板块内股票（按成交额排序）', 'sector stocks --code BK0428 --order cg');
     runTest('获取板块内股票（按换手率排序）', 'sector stocks --code BK0428 --order cr');
-    
+
     // sector top
     runTest('获取热门股票数据', 'sector top');
-    
+
     // sector gn - 测试不同的type参数
     runTest('获取热门概念板块（同花顺）', 'sector gn --type ths');
     runTest('获取热门概念板块（东方财富）', 'sector gn --type dfcf');
@@ -185,16 +193,16 @@ function testStockCommands() {
     log('\n========================================', 'cyan');
     log('测试股票数据命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // stock info - 测试单个和多个代码
     runTest('获取单个股票信息', 'stock info 000001');
     runTest('获取多个股票信息', 'stock info 000001 600031 300750');
     runTest('获取股票信息（116格式）', 'stock info 116.000001');
-    
+
     // stock gn - 测试不同的gnId和type参数
     runTest('获取概念股票（同花顺格式）', 'stock gn 881155 --type ths');
     runTest('获取概念股票（东方财富格式）', 'stock gn BK0428 --type dfcf');
-    
+
     // stock pattern - 测试不同的形态类型
     const patterns = ['vcp', 'rps', 'sctr', 'gxl', 'trendUp', 'high_60d', 'newHigh', 'fangliang', 'zdf1dTop3'];
     patterns.forEach(pattern => {
@@ -207,7 +215,7 @@ function testKlineCommands() {
     log('\n========================================', 'cyan');
     log('测试K线数据命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 测试不同的代码格式
     runTest('获取K线（上证指数）', 'kline 000001');
     runTest('获取K线（深证成指）', 'kline 399001');
@@ -222,7 +230,7 @@ function testZdtCommands() {
     log('\n========================================', 'cyan');
     log('测试涨跌停数据命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 测试不同的type参数
     runTest('获取涨停股票', 'zdt --type zt');
     runTest('获取跌停股票', 'zdt --type dt');
@@ -234,7 +242,7 @@ function testSecidCommands() {
     log('\n========================================', 'cyan');
     log('测试代码转换命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 测试不同的代码格式
     runTest('转换代码（6位数字）', 'secid 000001');
     runTest('转换代码（sh前缀）', 'secid sh000001');
@@ -248,7 +256,7 @@ function testSearchCommands() {
     log('\n========================================', 'cyan');
     log('测试搜索命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 测试不同的关键词和type参数
     runTest('搜索股票（关键词）', 'search 平安');
     runTest('搜索股票（拼音）', 'search pa');
@@ -260,7 +268,7 @@ function testDividendCommands() {
     log('\n========================================', 'cyan');
     log('测试红利类指数命令', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 测试不同的指数代码
     runTest('获取红利低波打分', 'dividend score -c 2.H30269');
     runTest('获取红利低波100打分', 'dividend score -c 2.930955');
@@ -273,7 +281,7 @@ function testErrorHandling() {
     log('\n========================================', 'cyan');
     log('测试错误处理', 'cyan');
     log('========================================', 'cyan');
-    
+
     // 测试无效参数
     runTest('无效的zdt类型', 'zdt --type invalid', false);
     runTest('无效的gn类型', 'sector gn --type invalid', false);
@@ -287,13 +295,15 @@ function generateReport() {
     log('\n========================================', 'cyan');
     log('测试报告', 'cyan');
     log('========================================', 'cyan');
-    
+
     log(`\n总测试数: ${CONFIG.passCount + CONFIG.failCount}`, 'blue');
     log(`通过: ${CONFIG.passCount}`, 'green');
     log(`失败: ${CONFIG.failCount}`, 'red');
-    log(`通过率: ${((CONFIG.passCount / (CONFIG.passCount + CONFIG.failCount)) * 100).toFixed(2)}%`, 
-        CONFIG.failCount === 0 ? 'green' : 'yellow');
-    
+    log(
+        `通过率: ${((CONFIG.passCount / (CONFIG.passCount + CONFIG.failCount)) * 100).toFixed(2)}%`,
+        CONFIG.failCount === 0 ? 'green' : 'yellow'
+    );
+
     // 保存详细报告
     const reportPath = '/Users/theo/www/git/spider-utils/spiders/muyang/xiapi-skills/cli/test_report.json';
     const report = {
@@ -306,10 +316,10 @@ function generateReport() {
         },
         results: CONFIG.testResults
     };
-    
+
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
     log(`\n详细报告已保存到: ${reportPath}`, 'blue');
-    
+
     // 显示失败的测试
     if (CONFIG.failCount > 0) {
         log('\n失败的测试:', 'red');
@@ -324,7 +334,7 @@ function generateReport() {
 // 主测试流程
 function main() {
     validateToken();
-    
+
     try {
         testConfigCommands();
         testMarketCommands();
