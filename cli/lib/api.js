@@ -7,7 +7,7 @@ function createClient(token) {
     return axios.create({
         baseURL: `${BASE_URL}/coze`,
         headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
         timeout: 30000
@@ -104,13 +104,10 @@ async function queryStockData(token, q, type = 'stock') {
     return post(client, '/query_stock_data', {q, type});
 }
 
-async function getMarketReview(token, date = null, detail = false, investmentStyle = 'all') {
+
+    async function getPatternStocks(token, pattern) {
     const client = createClient(token);
-    const params = {};
-    if (date) params.date = date;
-    if (detail) params.detail = detail;
-    if (investmentStyle !== 'all') params.investmentStyle = investmentStyle;
-    return get(client, `/market_review${Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''}`);
+    return post(client, '/get_pattern_stocks', {pattern});
 }
 
 module.exports = {
@@ -128,5 +125,9 @@ module.exports = {
     getKline,
     getZdtPool,
     queryStockData,
+<<<<<<< HEAD
     getMarketReview
+=======
+    getPatternStocks
+>>>>>>> dc55f8784692feb918084c317fd6708b0b713eae
 };
