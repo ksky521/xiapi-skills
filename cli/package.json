@@ -26,5 +26,11 @@
     },
     "engines": {
         "node": ">=14.0.0"
-    }
+    },
+    "files": [
+        "bin",
+        "commands",
+        "lib",
+        "README.md"
+    ]
 }
