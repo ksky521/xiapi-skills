@@ -4,7 +4,7 @@ const API_BASE_URL = 'https://daxiapi.com/coze';
 
 async function getKline(token, code) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/get_kline`, {
+        const response = await axios.post(`${API_BASE_URL}/get_kline`, {
             headers: {
                 Authorization: `Bearer ${token}`
             },
@@ -43,6 +43,7 @@ async function getDividendScore(token, code) {
 
         return result;
     } catch (error) {
+        console.log(error);
         throw error;
     }
 }
