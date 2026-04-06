@@ -7,7 +7,7 @@ function createClient(token) {
     return axios.create({
         baseURL: `${BASE_URL}/coze`,
         headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
         timeout: 30000
@@ -99,11 +99,6 @@ async function getZdtPool(token, type = 'zt') {
     return post(client, '/get_zdt_pool', {type});
 }
 
-async function getSecId(token, code) {
-    const client = createClient(token);
-    return post(client, '/get_sec_id', {code});
-}
-
 async function queryStockData(token, q, type = 'stock') {
     const client = createClient(token);
     return post(client, '/query_stock_data', {q, type});
@@ -128,7 +123,6 @@ module.exports = {
     getGainianStock,
     getKline,
     getZdtPool,
-    getSecId,
     queryStockData,
     getPatternStocks
 };

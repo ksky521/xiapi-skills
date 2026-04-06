@@ -3,7 +3,7 @@ name: daxiapi
 description: 当用户需要获取A股市场数据、板块分析、个股动量排名、市场温度、估值水平等金融数据时，调用大虾皮(daxiapi.com) API接口获取数据。支持市场宽度分析、行业相对强度、风格轮动判断，适用于自下向上选股策略。
 metadata:
     category: 金融分析
-    tags: [大虾皮, daxiapi, 金融分析, 股票, 市场热力图, 动量, 估值, 风格轮动]
+    tags: [大虾皮, 虾皮, daxiapi, 金融分析, 股票, 市场热力图, 动量, 估值, 风格轮动]
     compatibility: [Linux, macOS, Windows]
     version: 1.0.0
     author: daxiapi team
