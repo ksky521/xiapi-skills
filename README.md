@@ -4,6 +4,10 @@
 
 xiapi-skills 是一个包含 CLI 工具和技能定义的集合，用于股票市场数据的爬取、分析和处理。该项目作为 git submodule 被主项目引用。
 
+**命名说明**：
+- `xiapi`：虾皮（xiapi）的拼音，指大虾皮网站
+- `daxiapi`：大虾皮（daxiapi）的拼音，是网站名称
+
 ## 目录结构
 
 ```
@@ -15,7 +19,7 @@ xiapi-skills/
 │   ├── package.json  # 项目配置
 │   └── README.md     # CLI 工具说明
 └── skills/           # 技能定义
-    └── daxiapi/      # 大西API技能
+    └── daxiapi/      # 大虾皮（daxiapi）技能
         ├── SKILL.md  # 技能描述
         └── references/ # 参考文档
 ```
