@@ -1,0 +1,30 @@
+{
+    "name": "daxiapi-cli",
+    "version": "2.0.1",
+    "description": "大虾皮金融数据API命令行工具",
+    "bin": {
+        "daxiapi": "./bin/index.js",
+        "dxp": "./bin/index.js"
+    },
+    "scripts": {
+        "test": "node bin/index.js --help"
+    },
+    "keywords": [
+        "stock",
+        "api",
+        "daxiapi",
+        "cli",
+        "finance"
+    ],
+    "author": "daxiapi.com",
+    "license": "MIT",
+    "dependencies": {
+        "axios": "^1.6.0",
+        "chalk": "^4.1.2",
+        "commander": "^11.1.0",
+        "conf": "^10.2.0"
+    },
+    "engines": {
+        "node": ">=14.0.0"
+    }
+}
