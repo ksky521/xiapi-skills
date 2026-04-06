@@ -109,6 +109,11 @@ async function queryStockData(token, q, type = 'stock') {
     return post(client, '/query_stock_data', {q, type});
 }
 
+async function getPatternStocks(token, pattern) {
+    const client = createClient(token);
+    return post(client, '/get_pattern_stocks', {pattern});
+}
+
 module.exports = {
     getMarketData,
     getMarketTemp,
@@ -124,5 +129,6 @@ module.exports = {
     getKline,
     getZdtPool,
     getSecId,
-    queryStockData
+    queryStockData,
+    getPatternStocks
 };
