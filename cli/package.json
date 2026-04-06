@@ -1,6 +1,6 @@
 {
     "name": "daxiapi-cli",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "description": "大虾皮金融数据API命令行工具",
     "bin": {
         "daxiapi": "./bin/index.js",
