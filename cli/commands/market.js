@@ -93,4 +93,29 @@ module.exports = function (program) {
                 process.exit(1);
             }
         });
+
+    marketCmd
+        .command('review')
+        .description(
+            '获取A股市场复盘报告，包括主流指数表现、板块热力图、涨跌停数据、大小盘轮动和市场温度分析，并根据投资风格给出个性化投资建议。'
+        )
+        .option('-d, --date <date>', '指定日期，格式：YYYY-MM-DD')
+        .option('-s, --style <style>', '投资风格：conservative（保守派）、speculative（投机派）、all（全部）')
+        .option('--detail', '返回详细数据')
+        .action(async (options) => {
+            try {
+                const token = config.getToken();
+                if (!token) {
+                    const error = new Error('未配置 API Token');
+                    error.response = {status: 401};
+                    throw error;
+                }
+
+                const data = await api.getMarketReview(token, options.date, options.detail, options.style);
+                output(data);
+            } catch (error) {
+                handleError(error);
+                process.exit(1);
+            }
+        });
 };

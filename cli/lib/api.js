@@ -104,6 +104,15 @@ async function queryStockData(token, q, type = 'stock') {
     return post(client, '/query_stock_data', {q, type});
 }
 
+async function getMarketReview(token, date = null, detail = false, investmentStyle = 'all') {
+    const client = createClient(token);
+    const params = {};
+    if (date) params.date = date;
+    if (detail) params.detail = detail;
+    if (investmentStyle !== 'all') params.investmentStyle = investmentStyle;
+    return get(client, `/market_review${Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''}`);
+}
+
 module.exports = {
     getMarketData,
     getMarketTemp,
@@ -118,5 +127,6 @@ module.exports = {
     getGainianStock,
     getKline,
     getZdtPool,
-    queryStockData
+    queryStockData,
+    getMarketReview
 };
