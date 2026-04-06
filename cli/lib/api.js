@@ -138,14 +138,16 @@ async function getDividendScore(token, code) {
         throw new Error('Invalid code: code must be a non-empty string');
     }
 
-    const klineData = await getKline(token, code);
-
-    if (!klineData || !Array.isArray(klineData.klines)) {
-        throw new Error('Invalid kline data structure: klines must be an array');
+    let rawData = await axios.get(`${BASE_URL}/sk/${code}.json`);
+    if(!rawData.data){
+        throw new Error('Failed to get kline data');
     }
-
-    const {klines} = klineData;
-    const scores = calculateScores(klines);
+    const klineData = rawData.data;
+    const klines = klineData.k || '';
+    const scores = calculateScores(klines.split(';').map(a=>{
+        const [date, open,close,  high, low, volume] = a.split(',');
+        return {date, close: Number(close), open: Number(open),  high, low, vol: Number(volume)};
+    }));
     const recentScores = scores.slice(-60);
 
     return {
@@ -154,8 +156,8 @@ async function getDividendScore(token, code) {
         scores: recentScores.map(item => ({
             date: item.date,
             score: item.totalScore,
-            cs: item.cs,
-            rsi: item.rsi
+            cs: item.cs.toFixed(2),
+            rsi: item.rsi.toFixed(2)
         }))
     };
 }
@@ -278,7 +280,6 @@ function calculateScores(data) {
     const {cs} = calculateEMA(DIVIDEND_SCORE_CONSTANTS.EMA_PERIOD, dataCopy);
     const [_, ma80Bias] = calculateMA(DIVIDEND_SCORE_CONSTANTS.MA_PERIOD, dataCopy);
     const rsi = calculateRSI(closes, DIVIDEND_SCORE_CONSTANTS.RSI_PERIOD);
-
     for (let i = 0; i < dataCopy.length; i++) {
         dataCopy[i].cs = cs[i] === '-' ? null : parseFloat(cs[i]);
         dataCopy[i].ma80Bias = ma80Bias[i] === '-' ? null : parseFloat(ma80Bias[i]);
