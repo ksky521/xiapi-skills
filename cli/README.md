@@ -73,11 +73,17 @@ daxiapi sector bk
 # 板块内个股排名
 daxiapi sector stocks --code BK0477
 
-# 热门股票
+# 热门股票（各板块领涨股）
 daxiapi sector top
 
-# 热门概念
+# 热门概念板块
 daxiapi sector gn
+
+# 使用同花顺数据源（默认）
+daxiapi sector gn --type ths
+
+# 使用东方财富数据源
+daxiapi sector gn --type dfcf
 ```
 
 ### 股票数据
@@ -95,6 +101,50 @@ daxiapi stock 000001 600031 300750
 
 # 概念股查询
 daxiapi stock gn GN1234
+
+# 技术形态筛选股票
+daxiapi stock pattern vcp
+daxiapi stock pattern rps
+daxiapi stock pattern newHigh
+```
+
+#### 支持的技术形态（pattern）
+
+| 形态代码 | 说明 |
+|---------|------|
+| **价值指标类** | |
+| gxl | 股息率大于3%的股票 |
+| **强度指标类** | |
+| rps | RPS大于70的股票（欧奈尔RPS指标） |
+| sctr | SCTR大于70的股票（Stockcharts Rank相对强度排序） |
+| rpsTop3 | RPS行业前三 |
+| csTop3 | CS行业前三 |
+| sctrTop3 | SCTR行业前三 |
+| **趋势形态类** | |
+| trendUp | K线趋势向上 |
+| high_60d | 大量创60日新高 |
+| newHigh | 新高附近 |
+| crossMa50 | 上穿MA50 |
+| crossoverBox | 价格行为交易法信号K，上穿箱体 |
+| cs_crossover_20 | CS穿过MA20 |
+| **成交量形态类** | |
+| fangliang | 放量上涨（前一天是VCP/3C形态，当天放量突破收盘在高点） |
+| fangliangtupo | 放量突破箱体 |
+| **涨跌幅排名类** | |
+| zdf1dTop3 | 1日涨幅行业前三 |
+| zdf5dTop3 | 5日涨幅行业前三 |
+| zdf10dTop3 | 10日涨幅行业前三 |
+| zdf20dTop3 | 20日涨幅行业前三 |
+| shizhiTop3 | 行业市值前三 |
+| **经典技术形态类** | |
+| vcp | 股魔VCP形态（波动收缩形态） |
+| joc | 跨越小溪Joc |
+| sos | 强势上涨SOS |
+| sos_h1 | SOS之后出现高1入场点 |
+| spring | Spring弹簧形态（上涨波段回调后出现spring向上） |
+| w | SOS之后出现W底吸收 |
+| lps | LPS最后供应点（SOS之后的LPS） |
+| ibs | K线实体较大（当日放量上涨收盘超昨日高点，实体长度超当日幅度69%） |
 ```
 
 ### K线数据

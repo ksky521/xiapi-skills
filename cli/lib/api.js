@@ -1,54 +1,165 @@
 const axios = require('axios');
+const config = require('./config');
 
-const API_BASE_URL = 'https://daxiapi.com/coze';
+const BASE_URL = config.get('baseUrl') || 'https://daxiapi.com';
 
-async function getKline(token, code) {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/get_kline`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            },
-            params: {
-                code: code
-            }
-        });
-        return response.data;
-    } catch (error) {
+const DIVIDEND_SCORE_CONSTANTS = {
+    ROLLING_WINDOW: 440,
+    PERCENTILE_LOW: 5,
+    PERCENTILE_HIGH: 95,
+    SCORE_MA_PERIOD: 5,
+    EMA_PERIOD: 20,
+    MA_PERIOD: 80,
+    RSI_PERIOD: 20,
+    MIN_VALID_VALUES: 10,
+    MIN_SCORE: 0,
+    MAX_SCORE: 100,
+    CS_WEIGHT: 0.35,
+    MA80_WEIGHT: 0.35,
+    RSI_WEIGHT: 0.3
+};
+
+function createClient(token) {
+    return axios.create({
+        baseURL: `${BASE_URL}/coze`,
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        timeout: 30000
+    });
+}
+
+async function get(client, path) {
+    const {data} = await client.get(path);
+    if (data.errCode !== 0) {
+        const error = new Error(data.errMsg || `API Error: ${data.errCode}`);
+        error.response = {status: data.errCode};
         throw error;
     }
+    return data.data;
+}
+
+async function post(client, path, body = {}) {
+    const {data} = await client.post(path, body);
+    if (data.errCode !== 0) {
+        const error = new Error(data.errMsg || `API Error: ${data.errCode}`);
+        error.response = {status: data.errCode};
+        throw error;
+    }
+    return data.data;
+}
+
+async function getMarketData(token) {
+    const client = createClient(token);
+    return get(client, '/get_index_data');
+}
+
+async function getMarketTemp(token) {
+    const client = createClient(token);
+    return get(client, '/get_market_temp');
+}
+
+async function getMarketStyle(token) {
+    const client = createClient(token);
+    return get(client, '/get_market_style');
+}
+
+async function getMarketValueData(token) {
+    const client = createClient(token);
+    return get(client, '/get_market_value_data');
+}
+
+async function getBkData(token) {
+    const client = createClient(token);
+    return get(client, '/get_bk_data');
+}
+
+async function getSectorData(token, orderBy = 'cs', limit = 5) {
+    const client = createClient(token);
+    return post(client, '/get_sector_data', {orderBy, lmt: limit});
+}
+
+async function getSectorRankStock(token, sectorCode, orderBy = 'cs') {
+    const client = createClient(token);
+    return post(client, '/get_sector_rank_stock', {sectorCode, orderBy});
+}
+
+async function getTopStocks(token) {
+    const client = createClient(token);
+    return post(client, '/get_top_stocks', {});
+}
+
+async function getGnHot(token, type = 'ths') {
+    const client = createClient(token);
+    return post(client, '/get_gn_hot', {type});
+}
+
+async function getStockData(token, codes) {
+    const client = createClient(token);
+    return post(client, '/get_stock_data', {code: codes});
+}
+
+async function getGainianStock(token, gnId, type = 'ths') {
+    const client = createClient(token);
+    return post(client, '/get_gainian_stock', {gnId, type});
+}
+
+async function getKline(token, code) {
+    const client = createClient(token);
+    return post(client, '/get_kline', {code});
+}
+
+async function getZdtPool(token, type = 'zt') {
+    const client = createClient(token);
+    return post(client, '/get_zdt_pool', {type});
+}
+
+async function getSecId(token, code) {
+    const client = createClient(token);
+    return post(client, '/get_sec_id', {code});
+}
+
+async function queryStockData(token, q, type = 'stock') {
+    const client = createClient(token);
+    return post(client, '/query_stock_data', {q, type});
+}
+
+async function getPatternStocks(token, pattern) {
+    const client = createClient(token);
+    return post(client, '/get_pattern_stocks', {pattern});
 }
 
 async function getDividendScore(token, code) {
-    try {
-        const klineData = await getKline(token, code);
-        const {klines} = klineData;
-
-        // 计算打分结果
-        const scores = calculateScores(klines);
-
-        // 取最近60天的数据
-        const recentScores = scores.slice(-60);
-
-        // 格式化输出
-        const result = {
-            code: code,
-            name: klineData.name || '未知指数',
-            scores: recentScores.map(item => ({
-                date: item.date,
-                score: item.totalScore,
-                cs: item.cs,
-                rsi: item.rsi
-            }))
-        };
-
-        return result;
-    } catch (error) {
-        console.log(error);
-        throw error;
+    if (!token || typeof token !== 'string') {
+        throw new Error('Invalid token: token must be a non-empty string');
     }
+    if (!code || typeof code !== 'string') {
+        throw new Error('Invalid code: code must be a non-empty string');
+    }
+
+    const klineData = await getKline(token, code);
+
+    if (!klineData || !Array.isArray(klineData.klines)) {
+        throw new Error('Invalid kline data structure: klines must be an array');
+    }
+
+    const {klines} = klineData;
+    const scores = calculateScores(klines);
+    const recentScores = scores.slice(-60);
+
+    return {
+        code: code,
+        name: klineData.name || '未知指数',
+        scores: recentScores.map(item => ({
+            date: item.date,
+            score: item.totalScore,
+            cs: item.cs,
+            rsi: item.rsi
+        }))
+    };
 }
 
-// 计算EMA
 function calculateEMA(period, data) {
     const closes = data.map(d => d.close);
     const cs = [];
@@ -67,7 +178,6 @@ function calculateEMA(period, data) {
     return {cs};
 }
 
-// 计算MA
 function calculateMA(period, data) {
     const closes = data.map(d => d.close);
     const ma = [];
@@ -91,7 +201,6 @@ function calculateMA(period, data) {
     return [ma, maBias];
 }
 
-// 计算RSI
 function calculateRSI(closes, period = 20) {
     const rsiValues = [];
     let gains = 0;
@@ -135,7 +244,6 @@ function calculateRSI(closes, period = 20) {
     return rsiValues;
 }
 
-// 计算百分位数
 function percentile(p, arr) {
     if (!arr.length) {
         return 0;
@@ -145,10 +253,9 @@ function percentile(p, arr) {
     return sorted[Math.max(0, index)];
 }
 
-// 计算滚动分数
 function calculateRollingScore(value, historyValues, lowPercentile, highPercentile) {
     const validValues = historyValues.filter(v => v !== null && !isNaN(v));
-    if (validValues.length < 10 || value === null) {
+    if (validValues.length < DIVIDEND_SCORE_CONSTANTS.MIN_VALID_VALUES || value === null) {
         return null;
     }
 
@@ -160,33 +267,29 @@ function calculateRollingScore(value, historyValues, lowPercentile, highPercenti
     }
 
     let score = ((value - low) / (high - low)) * 100;
-    score = Math.max(0, Math.min(100, score));
+    score = Math.max(DIVIDEND_SCORE_CONSTANTS.MIN_SCORE, Math.min(DIVIDEND_SCORE_CONSTANTS.MAX_SCORE, score));
     return parseFloat(score.toFixed(2));
 }
 
-// 计算综合分数
 function calculateScores(data) {
-    const ROLLING_WINDOW = 440;
-    const PERCENTILE_LOW = 5;
-    const PERCENTILE_HIGH = 95;
-    const SCORE_MA_PERIOD = 5;
+    const dataCopy = data.map(item => ({...item}));
 
-    const closes = data.map(d => d.close);
-    const {cs} = calculateEMA(20, data);
-    const [_, ma80Bias] = calculateMA(80, data);
-    const rsi = calculateRSI(closes, 20);
+    const closes = dataCopy.map(d => d.close);
+    const {cs} = calculateEMA(DIVIDEND_SCORE_CONSTANTS.EMA_PERIOD, dataCopy);
+    const [_, ma80Bias] = calculateMA(DIVIDEND_SCORE_CONSTANTS.MA_PERIOD, dataCopy);
+    const rsi = calculateRSI(closes, DIVIDEND_SCORE_CONSTANTS.RSI_PERIOD);
 
-    for (let i = 0; i < data.length; i++) {
-        data[i].cs = cs[i] === '-' ? null : parseFloat(cs[i]);
-        data[i].ma80Bias = ma80Bias[i] === '-' ? null : parseFloat(ma80Bias[i]);
-        data[i].rsi = rsi[i];
+    for (let i = 0; i < dataCopy.length; i++) {
+        dataCopy[i].cs = cs[i] === '-' ? null : parseFloat(cs[i]);
+        dataCopy[i].ma80Bias = ma80Bias[i] === '-' ? null : parseFloat(ma80Bias[i]);
+        dataCopy[i].rsi = rsi[i];
     }
 
-    const csValues = data.map(d => d.cs);
-    const ma80BiasValues = data.map(d => d.ma80Bias);
+    const csValues = dataCopy.map(d => d.cs);
+    const ma80BiasValues = dataCopy.map(d => d.ma80Bias);
 
-    for (let i = 0; i < data.length; i++) {
-        const current = data[i];
+    for (let i = 0; i < dataCopy.length; i++) {
+        const current = dataCopy[i];
         if (current.cs === null || current.ma80Bias === null || current.rsi === null) {
             current.csScore = null;
             current.ma80Score = null;
@@ -196,46 +299,75 @@ function calculateScores(data) {
             continue;
         }
 
-        const startIdx = Math.max(0, i - ROLLING_WINDOW + 1);
+        const startIdx = Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.ROLLING_WINDOW + 1);
         const csHistory = csValues.slice(startIdx, i + 1);
         const ma80History = ma80BiasValues.slice(startIdx, i + 1);
 
-        current.csScore = calculateRollingScore(current.cs, csHistory, PERCENTILE_LOW, PERCENTILE_HIGH);
-        current.ma80Score = calculateRollingScore(current.ma80Bias, ma80History, PERCENTILE_LOW, PERCENTILE_HIGH);
+        current.csScore = calculateRollingScore(
+            current.cs,
+            csHistory,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
+        );
+        current.ma80Score = calculateRollingScore(
+            current.ma80Bias,
+            ma80History,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
+        );
         current.rsiScore = current.rsi;
 
         if (current.csScore !== null && current.ma80Score !== null && current.rsiScore !== null) {
             current.totalScore = parseFloat(
-                (current.csScore * 0.35 + current.ma80Score * 0.35 + current.rsiScore * 0.3).toFixed(2)
+                (
+                    current.csScore * DIVIDEND_SCORE_CONSTANTS.CS_WEIGHT +
+                    current.ma80Score * DIVIDEND_SCORE_CONSTANTS.MA80_WEIGHT +
+                    current.rsiScore * DIVIDEND_SCORE_CONSTANTS.RSI_WEIGHT
+                ).toFixed(2)
             );
         } else {
             current.totalScore = null;
         }
     }
 
-    for (let i = 0; i < data.length; i++) {
-        const current = data[i];
+    for (let i = 0; i < dataCopy.length; i++) {
+        const current = dataCopy[i];
         if (current.totalScore === null) {
             current.scoreMA = null;
             continue;
         }
 
-        const scoreHistory = data
-            .slice(Math.max(0, i - SCORE_MA_PERIOD + 1), i + 1)
+        const scoreHistory = dataCopy
+            .slice(Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.SCORE_MA_PERIOD + 1), i + 1)
             .filter(d => d.totalScore !== null)
             .map(d => d.totalScore);
 
-        if (scoreHistory.length >= SCORE_MA_PERIOD) {
+        if (scoreHistory.length >= DIVIDEND_SCORE_CONSTANTS.SCORE_MA_PERIOD) {
             current.scoreMA = parseFloat((scoreHistory.reduce((a, b) => a + b, 0) / scoreHistory.length).toFixed(2));
         } else {
             current.scoreMA = current.totalScore;
         }
     }
 
-    return data;
+    return dataCopy;
 }
 
 module.exports = {
+    getMarketData,
+    getMarketTemp,
+    getMarketStyle,
+    getMarketValueData,
+    getBkData,
+    getSectorData,
+    getSectorRankStock,
+    getTopStocks,
+    getGnHot,
+    getStockData,
+    getGainianStock,
     getKline,
+    getZdtPool,
+    getSecId,
+    queryStockData,
+    getPatternStocks,
     getDividendScore
 };
