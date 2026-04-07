@@ -3,6 +3,7 @@ const config = require('./config');
 const request = require('./request');
 const {formatThsVolumeTime, isTradingNow} = require('./utils');
 const {calculateScores} = require('./dividendUtils');
+const getFinanceReportDetail = require('./caibao');
 
 const BASE_URL = config.get('baseUrl') || 'https://daxiapi.com';
 
@@ -359,5 +360,6 @@ module.exports = {
     getStockRank,
     getPlateRank,
     getTurnoverData,
-    getTurnoverDataByMinute
+    getTurnoverDataByMinute,
+    getFinanceReportDetail
 };

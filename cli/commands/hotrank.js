@@ -23,7 +23,7 @@ module.exports = function (program) {
         .action(async options => {
             try {
                 const data = await api.getStockRank(options.type, options.listType);
-                console.log(encode(data));
+                console.log('```toon\n' + encode(data) + '\n```');
             } catch (error) {
                 handleError(error);
                 process.exit(1);
@@ -38,7 +38,7 @@ module.exports = function (program) {
         .action(async () => {
             try {
                 const data = await api.getPlateRank('concept');
-                console.log(encode(data));
+                console.log('```toon\n' + encode(data) + '\n```');
             } catch (error) {
                 handleError(error);
                 process.exit(1);
@@ -54,7 +54,7 @@ module.exports = function (program) {
         .action(async options => {
             try {
                 const data = await api.getPlateRank(options.type);
-                console.log(encode(data));
+                console.log('```toon\n' + encode(data) + '\n```');
             } catch (error) {
                 handleError(error);
                 process.exit(1);

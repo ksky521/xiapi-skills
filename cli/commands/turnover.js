@@ -9,7 +9,7 @@ module.exports = function (program) {
         .action(async () => {
             try {
                 const data = await api.getTurnoverData();
-                console.log(encode(data));
+                console.log('```toon\n' + encode(data) + '\n```');
             } catch (error) {
                 handleError(error);
                 process.exit(1);

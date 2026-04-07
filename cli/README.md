@@ -209,6 +209,17 @@ daxiapi hotrank board
 | value | 价值派关注个股 |
 | tech | 技术派关注个股 |
 
+### 财报数据
+
+```bash
+# 获取个股财务报表数据
+daxiapi report finance 300014
+
+# 查询其他股票
+daxiapi report finance 600036
+daxiapi report finance 000001
+```
+
 ### 工具
 
 ```bash
