@@ -1,7 +1,7 @@
 const config = require('../lib/config');
 const api = require('../lib/api');
 const {handleError, createParameterError} = require('../lib/error');
-const {output} = require('../lib/output');
+const {output, encode} = require('../lib/output');
 
 const SUPPORTED_PATTERNS = [
     'gxl',
@@ -137,6 +137,37 @@ module.exports = function (program) {
 
                 const data = await api.getPatternStocks(token, pattern);
                 output(data);
+            } catch (error) {
+                handleError(error);
+                process.exit(1);
+            }
+        });
+
+    stockCmd
+        .command('capital-flow <code>')
+        .description(
+            '获取个股主力资金流向数据，返回最近N天的资金动向。' +
+                '包括主力净流入、主力净流入占比、五日主力净流入、板块资金流向等详细数据。' +
+                '支持6位数字代码，自动识别沪深市场。可用于分析主力资金动向和资金面分析。'
+        )
+        .option('--days <days>', '返回天数（默认5天）', '5')
+        .action(async (code, options) => {
+            try {
+                if (!code) {
+                    throw createParameterError('参数无效', ["参数 'code' 不能为空"], ['daxiapi stock capital-flow 000001']);
+                }
+
+                const days = parseInt(options.days, 10);
+                if (isNaN(days) || days < 1 || days > 30) {
+                    throw createParameterError(
+                        '参数无效',
+                        ["参数 'days' 必须是1-30之间的整数"],
+                        ['daxiapi stock capital-flow 000001 --days 5', 'daxiapi stock capital-flow 000001 --days 10']
+                    );
+                }
+
+                const data = await api.getCapitalFlow(code, days);
+                console.log('```toon\n' + encode(data) + '\n```');
             } catch (error) {
                 handleError(error);
                 process.exit(1);

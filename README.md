@@ -52,7 +52,7 @@ npm install
 - `search`：搜索功能
 - `secid`：获取证券ID
 - `sector`：获取行业数据
-- `stock`：获取股票数据
+- `stock`：获取股票数据（包含主力资金流向）
 - `zdt`：获取涨跌停数据
 
 ### 使用示例
@@ -63,6 +63,12 @@ node bin/index.js stock 600000
 
 # 获取市场数据
 node bin/index.js market
+
+# 获取主力资金流向（最近5天）
+node bin/index.js stock capital-flow 000010
+
+# 获取主力资金流向（指定天数）
+node bin/index.js stock capital-flow 000010 --days 10
 ```
 
 ## 技能定义

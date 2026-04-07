@@ -1,486 +1,216 @@
-const axios = require('axios');
-const config = require('./config');
-const request = require('./request');
-const {formatThsVolumeTime, isTradingNow} = require('./utils');
-const {calculateScores} = require('./dividendUtils');
-const getFinanceReportDetail = require('./caibao');
+const DIVIDEND_SCORE_CONSTANTS = {
+    ROLLING_WINDOW: 440,
+    PERCENTILE_LOW: 5,
+    PERCENTILE_HIGH: 95,
+    SCORE_MA_PERIOD: 5,
+    EMA_PERIOD: 20,
+    MA_PERIOD: 80,
+    RSI_PERIOD: 20,
+    MIN_VALID_VALUES: 10,
+    MIN_SCORE: 0,
+    MAX_SCORE: 100,
+    CS_WEIGHT: 0.35,
+    MA80_WEIGHT: 0.35,
+    RSI_WEIGHT: 0.3
+};
 
-const BASE_URL = config.get('baseUrl') || 'https://daxiapi.com';
+function calculateEMA(period, data) {
+    const closes = data.map(d => d.close);
+    const cs = [];
+    let ema = closes[0];
+    const multiplier = 2 / (period + 1);
 
-function createClient(token) {
-    return axios.create({
-        baseURL: `${BASE_URL}/coze`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        timeout: 30000
-    });
-}
-
-async function get(client, path) {
-    const {data} = await client.get(path);
-    if (data.errCode !== 0) {
-        const error = new Error(data.errMsg || `API Error: ${data.errCode}`);
-        error.response = {status: data.errCode};
-        throw error;
-    }
-    return data.data;
-}
-
-async function post(client, path, body = {}) {
-    const {data} = await client.post(path, body);
-    if (data.errCode !== 0) {
-        const error = new Error(data.errMsg || `API Error: ${data.errCode}`);
-        error.response = {status: data.errCode};
-        throw error;
-    }
-    return data.data;
-}
-
-async function getMarketData(token) {
-    const client = createClient(token);
-    return get(client, '/get_index_data');
-}
-
-async function getMarketTemp(token) {
-    const client = createClient(token);
-    return get(client, '/get_market_temp');
-}
-
-async function getMarketStyle(token) {
-    const client = createClient(token);
-    return get(client, '/get_market_style');
-}
-
-async function getMarketValueData(token) {
-    const client = createClient(token);
-    return get(client, '/get_market_value_data');
-}
-
-async function getBkData(token) {
-    const client = createClient(token);
-    return get(client, '/get_bk_data');
-}
-
-async function getSectorData(token, orderBy = 'cs', limit = 5) {
-    const client = createClient(token);
-    return post(client, '/get_sector_data', {orderBy, lmt: limit});
-}
-
-async function getSectorRankStock(token, sectorCode, orderBy = 'cs') {
-    const client = createClient(token);
-    return post(client, '/get_sector_rank_stock', {sectorCode, orderBy});
-}
-
-async function getTopStocks(token) {
-    const client = createClient(token);
-    return post(client, '/get_top_stocks', {});
-}
-
-async function getGnHot(token, type = 'ths') {
-    const client = createClient(token);
-    return post(client, '/get_gn_hot', {type});
-}
-
-async function getStockData(token, codes) {
-    const client = createClient(token);
-    return post(client, '/get_stock_data', {code: codes});
-}
-
-async function getGainianStock(token, gnId, type = 'ths') {
-    const client = createClient(token);
-    return post(client, '/get_gainian_stock', {gnId, type});
-}
-
-async function getKline(token, code) {
-    const client = createClient(token);
-    return post(client, '/get_kline', {code});
-}
-
-async function getZdtPool(token, type = 'zt') {
-    const client = createClient(token);
-    return post(client, '/get_zdt_pool', {type});
-}
-
-async function getSecId(token, code) {
-    const client = createClient(token);
-    return post(client, '/get_sec_id', {code});
-}
-
-async function queryStockData(token, q, type = 'stock') {
-    const client = createClient(token);
-    return post(client, '/query_stock_data', {q, type});
-}
-
-async function getPatternStocks(token, pattern) {
-    const client = createClient(token);
-    return post(client, '/get_pattern_stocks', {pattern});
-}
-
-async function getDividendScore(token, code) {
-    if (!token || typeof token !== 'string') {
-        throw new Error('Invalid token: token must be a non-empty string');
-    }
-    if (!code || typeof code !== 'string') {
-        throw new Error('Invalid code: code must be a non-empty string');
-    }
-
-    let rawData = await axios.get(`${BASE_URL}/sk/${code}.json`);
-    if (!rawData.data) {
-        throw new Error('Failed to get kline data');
-    }
-    const klineData = rawData.data;
-    const klines = klineData.k || '';
-    const scores = calculateScores(
-        klines.split(';').map(a => {
-            const [date, open, close, high, low, volume] = a.split(',');
-            return {date, close: Number(close), open: Number(open), high, low, vol: Number(volume)};
-        })
-    );
-    const recentScores = scores.slice(-60);
-
-    return {
-        code: code,
-        name: klineData.name || '未知指数',
-        scores: recentScores.map(item => ({
-            date: item.date,
-            score: item.totalScore,
-            cs: item.cs.toFixed(2),
-            rsi: item.rsi.toFixed(2)
-        }))
-    };
-}
-
-async function getStockRank(type = 'hour', listType = 'normal') {
-    try {
-        const params = {stock_type: 'a', list_type: listType};
-
-        // 只有 normal 和 skyrocket 才有 type 参数，默认为 hour
-        // 其他榜单类型固定为 day
-        if (listType === 'normal' || listType === 'skyrocket') {
-            params.type = type;
+    for (let i = 0; i < closes.length; i++) {
+        if (i === 0) {
+            ema = closes[i];
         } else {
-            params.type = 'day';
+            ema = (closes[i] - ema) * multiplier + ema;
         }
-        const response = await request.get('/fuyao/hot_list_data/out/hot_list/v1/stock', params);
-        const data = extractData(response, 'stock_list');
-
-        return data.map(a => {
-            const result = {
-                code: a.code,
-                name: a.name,
-                涨跌幅: a.rise_and_fall,
-                讨论热度: a.rate,
-                热榜变化: a.hot_rank_chg,
-                排名: a.display_order != null ? a.display_order : a.order != null ? a.order : 0
-            };
-
-            if (listType === 'normal' || listType === 'skyrocket') {
-                result.上涨原因 = a.analyse_title;
-                result.上涨分析 = a.analyse
-                    ?.split('\n')
-                    .map(line => {
-                        if (line.includes('免责声明')) {
-                            return '';
-                        }
-                        return line.trim();
-                    })
-                    .filter(line => line !== '')
-                    .join('\n');
-            }
-
-            return result;
-        });
-    } catch (err) {
-        console.error('[getStockRank] 获取热股榜数据失败:', err);
-        throw err;
+        cs.push(((closes[i] - ema) / ema) * 100);
     }
+
+    return {cs};
 }
 
-async function getPlateRank(type = 'concept') {
-    try {
-        const response = await request.get('/fuyao/hot_list_data/out/hot_list/v1/plate', {type});
-        const data = extractData(response, 'plate_list');
+function calculateMA(period, data) {
+    const closes = data.map(d => d.close);
+    const ma = [];
+    const maBias = [];
 
-        return data.map(d => {
-            //          - code: "881160"
-            // rise_and_fall: 1.4869
-            // etf_rise_and_fall: -0.1488
-            // hot_rank_chg: 0
-            // market_id: 48
-            // hot_tag: 连续11天上榜
-            // etf_product_id: "159766"
-            // rate: "10366.5"
-            // etf_name: 旅游ETF富国
-            // name: 旅游及酒店
-            // tag: 1家涨停
-            // etf_market_id: 36
-            // order: 20
-            return {
-                code: d.code,
-                name: d.name,
-                涨跌幅: d.rise_and_fall,
-                对应etf涨跌幅: d.etf_rise_and_fall,
-                热榜涨跌幅: d.hot_rank_chg,
-                热榜标签: d.hot_tag,
-                对应etf代码: d.etf_product_id,
-                讨论热度: d.rate,
-                对应etf名称: d.etf_name,
-                tag: d.tag,
-                排名: d.display_order != null ? d.display_order : d.order != null ? d.order : 0
-            };
-        });
-    } catch (err) {
-        console.error('[getPlateRank] 获取板块热榜数据失败:', err);
-        throw err;
+    for (let i = 0; i < closes.length; i++) {
+        if (i < period - 1) {
+            ma.push('-');
+            maBias.push('-');
+        } else {
+            let sum = 0;
+            for (let j = 0; j < period; j++) {
+                sum += closes[i - j];
+            }
+            const avg = sum / period;
+            ma.push(avg);
+            maBias.push(((closes[i] - avg) / avg) * 100);
+        }
     }
+
+    return [ma, maBias];
 }
 
-function extractData(response, listKey) {
-    if (response && response.data && response.data[listKey] && Array.isArray(response.data[listKey])) {
-        return response.data[listKey];
-    }
-    if (Array.isArray(response)) {
-        return response;
-    }
-    console.warn('[extractData] 未知的数据格式:', response);
-    return [];
-}
+function calculateRSI(closes, period = 20) {
+    const rsiValues = [];
+    let gains = 0;
+    let losses = 0;
 
-async function getTurnoverData(type = 'day') {
-    try {
-        const minuteData = await getTurnoverDataByMinute();
-
-        const data = await request.get('/fuyao/market_analysis_api/chart/v1/get_chart_data', {
-            chart_key: 'turnover_day'
-        });
-
-        if (data && data.status_code === 0 && data.data && data.data.charts) {
-            const charts = data.data.charts;
-            const pointList = charts.point_list;
-
-            if (!pointList || pointList.length < 2) {
-                throw new Error('数据不足');
-            }
-
-            const latest = pointList[pointList.length - 1];
-            const previous = pointList[pointList.length - 2];
-
-            const currentTurnover = latest[1];
-            const prevTurnover = previous[1];
-            const diff = currentTurnover - prevTurnover;
-            const currentYi = currentTurnover / 100000000; // 先转为亿
-            const currentWanYi = (currentYi / 10000).toFixed(2); // 再转为万亿
-            const diffYi = (Math.abs(diff) / 100000000).toFixed(2); // 转为亿
-            const formattedData = {
-                当前成交额: currentWanYi + '万亿',
-                变化量: (diff > 0 ? '增加' : '减少') + diffYi + '亿',
-                较上日: diff > 0 ? '增加' : '减少'
-            };
-            const isTrading = minuteData.isTrading;
-            //               '0': { val: 1623545300000, name: '当日成交额', key: 'turnover' },
-            //   '1': { val: 1668872000000, name: '昨日成交额', key: 'turnover_pre' },
-            //   '2': { val: -45326700000, name: '较昨日变动', key: 'turnover_change' },
-            //   '3': { val: 1623545300000, name: '预测全天成交额', key: 'predict_turnover' },
-            const rs = {};
-            minuteData.header.forEach((item, index) => {
-                rs[item.name] = item.val;
-            });
-
-            if (isTrading) {
-                return {
-                    是否正在盘中交易: isTrading ? '是' : '否',
-                    ...rs,
-                    minuteData
-                };
-            }
-            return {
-                ...formattedData,
-                是否正在盘中交易: isTrading ? '是' : '否',
-                ...rs,
-                minuteData
-            };
+    for (let i = 0; i < closes.length; i++) {
+        if (i < period) {
+            rsiValues.push(null);
+            continue;
         }
 
-        throw new Error('数据格式错误');
-    } catch (err) {
-        console.error('[getTurnoverData] 获取成交额数据失败:', err);
-        throw err;
-    }
-}
-
-async function getTurnoverDataByMinute() {
-    try {
-        const data = await request.get('/fuyao/market_analysis_api/chart/v1/get_chart_data', {
-            chart_key: 'turnover_minute'
-        });
-
-        if (data && data.status_code === 0 && data.data && data.data.charts) {
-            const charts = data.data.charts;
-            const e = formatThsVolumeTime(data.data);
-            const isTrading = isTradingNow(e.dataTimestamp);
-            return {
-                isTrading,
-                name: charts.name,
-                time: charts.mtime,
-                header: charts.header,
-                point_key_list: charts.point_key_list,
-                point_list: charts.point_list,
-                lines: charts.lines,
-                x_label_list: charts.x_label_list
-            };
+        const change = closes[i] - closes[i - 1];
+        if (i === period) {
+            let sumGain = 0;
+            let sumLoss = 0;
+            for (let j = 1; j <= period; j++) {
+                const c = closes[j] - closes[j - 1];
+                if (c > 0) {
+                    sumGain += c;
+                } else {
+                    sumLoss += Math.abs(c);
+                }
+            }
+            gains = sumGain / period;
+            losses = sumLoss / period;
+        } else {
+            const currentGain = change > 0 ? change : 0;
+            const currentLoss = change < 0 ? Math.abs(change) : 0;
+            gains = (gains * (period - 1) + currentGain) / period;
+            losses = (losses * (period - 1) + currentLoss) / period;
         }
 
-        throw new Error('数据格式错误');
-    } catch (err) {
-        console.error('[getTurnoverDataByMinute] 获取成交额数据失败:', err);
-        throw err;
+        if (gains + losses === 0) {
+            rsiValues.push(50);
+        } else {
+            const rs = gains / losses;
+            rsiValues.push(parseFloat((100 - 100 / (1 + rs)).toFixed(2)));
+        }
     }
+
+    return rsiValues;
 }
 
-function normalizeHttps(url) {
-    if (!url) {
-        return '';
+function percentile(p, arr) {
+    if (!arr.length) {
+        return 0;
     }
-    return String(url).replace(/^http:\/\//, 'https://');
+    const sorted = [...arr].sort((a, b) => a - b);
+    const index = Math.ceil((p / 100) * sorted.length) - 1;
+    return sorted[Math.max(0, index)];
 }
 
-async function getNewsSentiment(secid, pageSize = 20) {
-    const response = await axios.get('https://np-listapi.eastmoney.com/comm/web/getListInfo', {
-        params: {
-            client: 'web',
-            biz: 'web_voice',
-            mTypeAndCode: secid,
-            pageSize,
-            type: 1,
-            req_trace: '3d4e684212bee1464c1b44611236955b',
-        },
-    });
+function calculateRollingScore(value, historyValues, lowPercentile, highPercentile) {
+    const validValues = historyValues.filter(v => v !== null && !isNaN(v));
+    if (validValues.length < DIVIDEND_SCORE_CONSTANTS.MIN_VALID_VALUES || value === null) {
+        return null;
+    }
 
-    const payload = response.data || {};
-    const list = payload.data?.list || [];
-    return {
-        pageIndex: payload.data?.page_index || 1,
-        pageSize: payload.data?.page_size || pageSize,
-        total: payload.data?.totle_hits || 0,
-        list: list.map((item) => ({
-            title: item.Art_Title,
-            showTime: item.Art_ShowTime,
-            artCode: item.Art_Code,
-            url: normalizeHttps(item.Art_Url),
-            originUrl: normalizeHttps(item.Art_OriginUrl),
-        })),
-    };
+    const low = percentile(lowPercentile, validValues);
+    const high = percentile(highPercentile, validValues);
+
+    if (low === high) {
+        return 50;
+    }
+
+    let score = ((value - low) / (high - low)) * 100;
+    score = Math.max(DIVIDEND_SCORE_CONSTANTS.MIN_SCORE, Math.min(DIVIDEND_SCORE_CONSTANTS.MAX_SCORE, score));
+    return parseFloat(score.toFixed(2));
 }
 
-async function getNewsNotice(code, pageSize = 20, pageIndex = 1) {
-    const response = await axios.get('https://np-anotice-stock.eastmoney.com/api/security/ann', {
-        params: {
-            sr: -1,
-            page_size: pageSize,
-            page_index: pageIndex,
-            ann_type: 'A',
-            client_source: 'web',
-            stock_list: code,
-            f_node: 0,
-            s_node: 0,
-        },
-    });
+function calculateScores(data) {
+    const dataCopy = data.map(item => ({...item}));
 
-    const payload = response.data || {};
-    const data = payload.data || {};
-    const list = data.list || [];
+    const closes = dataCopy.map(d => d.close);
+    const {cs} = calculateEMA(DIVIDEND_SCORE_CONSTANTS.EMA_PERIOD, dataCopy);
+    const [_, ma80Bias] = calculateMA(DIVIDEND_SCORE_CONSTANTS.MA_PERIOD, dataCopy);
+    const rsi = calculateRSI(closes, DIVIDEND_SCORE_CONSTANTS.RSI_PERIOD);
+    for (let i = 0; i < dataCopy.length; i++) {
+        dataCopy[i].cs = cs[i] === '-' ? null : parseFloat(cs[i]);
+        dataCopy[i].ma80Bias = ma80Bias[i] === '-' ? null : parseFloat(ma80Bias[i]);
+        dataCopy[i].rsi = rsi[i];
+    }
 
-    return {
-        pageIndex: data.page_index || pageIndex,
-        pageSize: data.page_size || pageSize,
-        total: data.total_hits || 0,
-        list: list.map((item) => {
-            const stockCode = item.codes?.[0]?.stock_code || code;
-            return {
-                title: item.title,
-                noticeDate: item.notice_date,
-                displayTime: item.display_time,
-                artCode: item.art_code,
-                stockCode,
-                url: `https://data.eastmoney.com/notices/detail/${stockCode}/${item.art_code}.html`,
-                columns: (item.columns || []).map((column) => column.column_name),
-            };
-        }),
-    };
-}
+    const csValues = dataCopy.map(d => d.cs);
+    const ma80BiasValues = dataCopy.map(d => d.ma80Bias);
 
-async function getNewsReport(code, pageSize = 25, pageIndex = 1, beginTime = '2026-01-01', endTime) {
-    const response = await axios.get('https://reportapi.eastmoney.com/report/list', {
-        params: {
-            pageNo: pageIndex,
-            pageSize,
-            code,
-            industryCode: '*',
-            industry: '*',
-            rating: '*',
-            ratingchange: '*',
-            beginTime,
-            endTime,
-            fields: '',
-            qType: 0,
-            sort: 'publishDate,desc',
-        },
-    });
+    for (let i = 0; i < dataCopy.length; i++) {
+        const current = dataCopy[i];
+        if (current.cs === null || current.ma80Bias === null || current.rsi === null) {
+            current.csScore = null;
+            current.ma80Score = null;
+            current.rsiScore = null;
+            current.totalScore = null;
+            current.scoreMA = null;
+            continue;
+        }
 
-    const payload = response.data || {};
-    const list = payload.data || [];
+        const startIdx = Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.ROLLING_WINDOW + 1);
+        const csHistory = csValues.slice(startIdx, i + 1);
+        const ma80History = ma80BiasValues.slice(startIdx, i + 1);
 
-    return {
-        pageIndex: payload.pageNo || pageIndex,
-        pageSize: payload.size || pageSize,
-        total: payload.hits || 0,
-        list: list.map((item) => ({
-            title: item.title,
-            stockCode: item.stockCode,
-            stockName: item.stockName,
-            publishDate: item.publishDate,
-            orgName: item.orgName,
-            rating: item.emRatingName,
-            infoCode: item.infoCode,
-            predictNextTwoYearEps: item.predictNextTwoYearEps,
-            predictNextTwoYearPe: item.predictNextTwoYearPe,
-            predictNextYearEps: item.predictNextYearEps,
-            predictNextYearPe: item.predictNextYearPe,
-            predictThisYearEps: item.predictThisYearEps,
-            predictThisYearPe: item.predictThisYearPe,
-            predictLastYearEps: item.predictLastYearEps,
-            predictLastYearPe: item.predictLastYearPe,
-            url: `https://data.eastmoney.com/report/info/${item.infoCode}.html`,
-        })),
-    };
+        current.csScore = calculateRollingScore(
+            current.cs,
+            csHistory,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
+        );
+        current.ma80Score = calculateRollingScore(
+            current.ma80Bias,
+            ma80History,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
+        );
+        current.rsiScore = current.rsi;
+
+        if (current.csScore !== null && current.ma80Score !== null && current.rsiScore !== null) {
+            current.totalScore = parseFloat(
+                (
+                    current.csScore * DIVIDEND_SCORE_CONSTANTS.CS_WEIGHT +
+                    current.ma80Score * DIVIDEND_SCORE_CONSTANTS.MA80_WEIGHT +
+                    current.rsiScore * DIVIDEND_SCORE_CONSTANTS.RSI_WEIGHT
+                ).toFixed(2)
+            );
+        } else {
+            current.totalScore = null;
+        }
+    }
+
+    for (let i = 0; i < dataCopy.length; i++) {
+        const current = dataCopy[i];
+        if (current.totalScore === null) {
+            current.scoreMA = null;
+            continue;
+        }
+
+        const scoreHistory = dataCopy
+            .slice(Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.SCORE_MA_PERIOD + 1), i + 1)
+            .filter(d => d.totalScore !== null)
+            .map(d => d.totalScore);
+
+        if (scoreHistory.length >= DIVIDEND_SCORE_CONSTANTS.SCORE_MA_PERIOD) {
+            current.scoreMA = parseFloat((scoreHistory.reduce((a, b) => a + b, 0) / scoreHistory.length).toFixed(2));
+        } else {
+            current.scoreMA = current.totalScore;
+        }
+    }
+
+    return dataCopy;
 }
 
 module.exports = {
-    getMarketData,
-    getMarketTemp,
-    getMarketStyle,
-    getMarketValueData,
-    getBkData,
-    getSectorData,
-    getSectorRankStock,
-    getTopStocks,
-    getGnHot,
-    getStockData,
-    getGainianStock,
-    getKline,
-    getZdtPool,
-    getSecId,
-    queryStockData,
-    getPatternStocks,
-    getDividendScore,
-    getStockRank,
-    getPlateRank,
-    getTurnoverData,
-    getTurnoverDataByMinute,
-    getFinanceReportDetail,
-    getNewsSentiment,
-    getNewsNotice,
-    getNewsReport,
+    DIVIDEND_SCORE_CONSTANTS,
+    calculateEMA,
+    calculateMA,
+    calculateRSI,
+    percentile,
+    calculateRollingScore,
+    calculateScores
 };
