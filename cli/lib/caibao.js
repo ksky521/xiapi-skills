@@ -2,59 +2,57 @@
 // const vm = require('vm');
 
 // ?ut=&invt=2&fltt=2&fields=&secid=1.600862&cb=&_=1601168994587
+const axios = require('axios');
 const picker = require('@ksky521/html-picker');
 const iconv = require('./iconv');
 
 const {getHeader} = require('./thsUtils');
 
-const request = require('request-promise-native');
-
 const API_URL = 'http://basic.10jqka.com.cn/';
 
-function getDetail(stockId) {
+async function getDetail(stockId) {
     const prefix = `${API_URL}${stockId}`;
     const url = `${prefix}/finance.html`;
-    // console.log(url);
-    return request({
-        uri: url,
-        encoding: null,
+    const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
         headers: getHeader({Referrer: prefix})
-    }).then(data => {
-        const html = iconv(data);
-        let rs = {};
-        picker(html, {
-            data: {
-                selector: 'p#main',
-                handler($node) {
-                    rs = JSON.parse($node.html());
-                }
-            }
-        });
-        const titles = rs.title;
-        const content = rs.report;
-        const reports = [];
-        for (let index = 0; index < content[0].length; index++) {
-            const report = {};
-            for (let i = 0; i < titles.length; i++) {
-                let title = titles[i];
-                if (typeof title === 'string') {
-                    title = title.trim();
-                } else if (Array.isArray(title)) {
-                    title = title[0];
-                }
-                if (content[index]) {
-                    report[title] = content[i][index];
-                } else {
-                    // console.log(report[title]);
-                }
-            }
-            if (Object.keys(report).length > 0) {
-                reports.push(report);
+    });
+
+    const html = iconv(response.data);
+    let rs = {};
+    picker(html, {
+        data: {
+            selector: 'p#main',
+            handler($node) {
+                rs = JSON.parse($node.html());
             }
         }
-        // console.log(titles.length, content.length);
-        return reports;
     });
+    const titles = rs.title;
+    const content = rs.report;
+    const reports = [];
+    for (let index = 0; index < content[0].length; index++) {
+        const report = {};
+        for (let i = 0; i < titles.length; i++) {
+            let title = titles[i];
+            if (typeof title === 'string') {
+                title = title.trim();
+            } else if (Array.isArray(title)) {
+                title = title[0];
+            }
+            if (content[index]) {
+                report[title] = content[i][index];
+            } else {
+                // console.log(report[title]);
+            }
+        }
+        if (Object.keys(report).length > 0) {
+            reports.push(report);
+        }
+    }
+
+    return reports;
 }
 
 module.exports = getDetail;
