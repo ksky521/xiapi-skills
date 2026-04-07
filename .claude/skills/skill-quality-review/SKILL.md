@@ -1,6 +1,6 @@
 ---
-name: skill-quality-check
-description: '当用户让你给Skill的打分或者评价Skill的时候，按照本文档指南进行检查'
+name: skill-quality-review
+description: '当用户让你给Skill的打分、审查或者评价Skill的时候，按照本文档指南进行检查'
 ---
 
 -
