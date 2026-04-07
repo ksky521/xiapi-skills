@@ -71,7 +71,7 @@ daxiapi sector --order zdf --limit 10
 daxiapi sector bk
 
 # 板块内个股排名
-daxiapi sector stocks --code BK0477
+daxiapi sector stocks --code BK0457
 
 # 热门股票（各板块领涨股）
 daxiapi sector top
@@ -94,13 +94,13 @@ daxiapi search 平安
 daxiapi search 锂电 --type bk
 
 # 查询单个股票
-daxiapi stock 000001
+daxiapi stock info 000001
 
 # 查询多个股票
-daxiapi stock 000001 600031 300750
+daxiapi stock info 000001 600031 300750
 
 # 概念股查询
-daxiapi stock gn GN1234
+daxiapi stock gn 881273
 
 # 技术形态筛选股票
 daxiapi stock pattern vcp
