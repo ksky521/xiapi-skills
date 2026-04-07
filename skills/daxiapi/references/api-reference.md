@@ -1,4 +1,4 @@
-# Coze API 详细参考文档
+# 大虾皮 API 详细参考文档
 
 **Base URL:** `https://daxiapi.com/coze`
 
@@ -783,6 +783,93 @@ fetch('/coze/get_pattern_stocks', {
 | scores[].score | 综合分数 |
 | scores[].cs | CS 值 |
 | scores[].rsi | RSI 值 |
+
+---
+
+### news sentiment
+
+用于获取个股舆情列表，适合做消息面异动跟踪。CLI 传入 `code` 后会自动转换为 `secid`。
+
+**CLI 对应命令:** `daxiapi news sentiment -c <code> -p <pageSize>`
+
+**参数说明:**
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | 是 | 股票代码，如 `600031` |
+| pageSize | number | 否 | 每页条数，默认 `20` |
+
+**响应字段（核心）:**
+| 字段 | 说明 |
+|------|------|
+| pageIndex | 页码 |
+| pageSize | 每页条数 |
+| total | 总条数 |
+| list[].title | 新闻标题 |
+| list[].showTime | 发布时间 |
+| list[].artCode | 文章编号 |
+| list[].url | 原文链接 |
+| list[].originUrl | 原始链接 |
+
+---
+
+### news notice
+
+用于获取个股公告列表，适合跟踪法定披露信息。
+
+**CLI 对应命令:** `daxiapi news notice -c <code> -p <pageSize> -i <pageIndex>`
+
+**参数说明:**
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | 是 | 股票代码，如 `600031` |
+| pageSize | number | 否 | 每页条数，默认 `20` |
+| pageIndex | number | 否 | 页码，默认 `1` |
+
+**响应字段（核心）:**
+| 字段 | 说明 |
+|------|------|
+| pageIndex | 页码 |
+| pageSize | 每页条数 |
+| total | 总条数 |
+| list[].title | 公告标题 |
+| list[].noticeDate | 公告日期 |
+| list[].displayTime | 展示时间 |
+| list[].artCode | 公告编号 |
+| list[].stockCode | 股票代码 |
+| list[].url | 公告详情链接 |
+| list[].columns[] | 公告分类标签 |
+
+---
+
+### news report
+
+用于获取个股研报列表，支持按时间区间筛选。
+
+**CLI 对应命令:** `daxiapi news report -c <code> -p <pageSize> -i <pageIndex> -b <beginTime> -e <endTime>`
+
+**参数说明:**
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | 是 | 股票代码，如 `600031` |
+| pageSize | number | 否 | 每页条数，默认 `25` |
+| pageIndex | number | 否 | 页码，默认 `1` |
+| beginTime | string | 否 | 开始日期，格式 `YYYY-MM-DD` |
+| endTime | string | 否 | 结束日期，格式 `YYYY-MM-DD` |
+
+**响应字段（核心）:**
+| 字段 | 说明 |
+|------|------|
+| pageIndex | 页码 |
+| pageSize | 每页条数 |
+| total | 总条数 |
+| list[].title | 研报标题 |
+| list[].stockCode | 股票代码 |
+| list[].stockName | 股票名称 |
+| list[].publishDate | 研报日期 |
+| list[].orgName | 机构名称 |
+| list[].rating | 评级 |
+| list[].infoCode | 研报编号 |
+| list[].url | 研报详情链接 |
 
 ---
 
