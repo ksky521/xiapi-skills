@@ -19,6 +19,7 @@
   "author": "daxiapi.com",
   "license": "MIT",
   "dependencies": {
+    "@toon-format/toon": "^2.1.0",
     "axios": "^1.6.0",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",

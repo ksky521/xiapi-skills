@@ -1,23 +1,10 @@
 const axios = require('axios');
 const config = require('./config');
+const request = require('./request');
+const {formatThsVolumeTime, isTradingNow} = require('./utils');
+const {calculateScores} = require('./dividendUtils');
 
 const BASE_URL = config.get('baseUrl') || 'https://daxiapi.com';
-
-const DIVIDEND_SCORE_CONSTANTS = {
-    ROLLING_WINDOW: 440,
-    PERCENTILE_LOW: 5,
-    PERCENTILE_HIGH: 95,
-    SCORE_MA_PERIOD: 5,
-    EMA_PERIOD: 20,
-    MA_PERIOD: 80,
-    RSI_PERIOD: 20,
-    MIN_VALID_VALUES: 10,
-    MIN_SCORE: 0,
-    MAX_SCORE: 100,
-    CS_WEIGHT: 0.35,
-    MA80_WEIGHT: 0.35,
-    RSI_WEIGHT: 0.3
-};
 
 function createClient(token) {
     return axios.create({
@@ -139,15 +126,17 @@ async function getDividendScore(token, code) {
     }
 
     let rawData = await axios.get(`${BASE_URL}/sk/${code}.json`);
-    if(!rawData.data){
+    if (!rawData.data) {
         throw new Error('Failed to get kline data');
     }
     const klineData = rawData.data;
     const klines = klineData.k || '';
-    const scores = calculateScores(klines.split(';').map(a=>{
-        const [date, open,close,  high, low, volume] = a.split(',');
-        return {date, close: Number(close), open: Number(open),  high, low, vol: Number(volume)};
-    }));
+    const scores = calculateScores(
+        klines.split(';').map(a => {
+            const [date, open, close, high, low, volume] = a.split(',');
+            return {date, close: Number(close), open: Number(open), high, low, vol: Number(volume)};
+        })
+    );
     const recentScores = scores.slice(-60);
 
     return {
@@ -162,195 +151,191 @@ async function getDividendScore(token, code) {
     };
 }
 
-function calculateEMA(period, data) {
-    const closes = data.map(d => d.close);
-    const cs = [];
-    let ema = closes[0];
-    const multiplier = 2 / (period + 1);
+async function getStockRank(type = 'hour', listType = 'normal') {
+    try {
+        const params = {stock_type: 'a', list_type: listType};
 
-    for (let i = 0; i < closes.length; i++) {
-        if (i === 0) {
-            ema = closes[i];
+        // 只有 normal 和 skyrocket 才有 type 参数，默认为 hour
+        // 其他榜单类型固定为 day
+        if (listType === 'normal' || listType === 'skyrocket') {
+            params.type = type;
         } else {
-            ema = (closes[i] - ema) * multiplier + ema;
+            params.type = 'day';
         }
-        cs.push(((closes[i] - ema) / ema) * 100);
-    }
+        const response = await request.get('/fuyao/hot_list_data/out/hot_list/v1/stock', params);
+        const data = extractData(response, 'stock_list');
 
-    return {cs};
-}
+        return data.map(a => {
+            const result = {
+                code: a.code,
+                name: a.name,
+                涨跌幅: a.rise_and_fall,
+                讨论热度: a.rate,
+                热榜变化: a.hot_rank_chg,
+                排名: a.display_order != null ? a.display_order : a.order != null ? a.order : 0
+            };
 
-function calculateMA(period, data) {
-    const closes = data.map(d => d.close);
-    const ma = [];
-    const maBias = [];
-
-    for (let i = 0; i < closes.length; i++) {
-        if (i < period - 1) {
-            ma.push('-');
-            maBias.push('-');
-        } else {
-            let sum = 0;
-            for (let j = 0; j < period; j++) {
-                sum += closes[i - j];
+            if (listType === 'normal' || listType === 'skyrocket') {
+                result.上涨原因 = a.analyse_title;
+                result.上涨分析 = a.analyse
+                    ?.split('\n')
+                    .map(line => {
+                        if (line.includes('免责声明')) {
+                            return '';
+                        }
+                        return line.trim();
+                    })
+                    .filter(line => line !== '')
+                    .join('\n');
             }
-            const avg = sum / period;
-            ma.push(avg);
-            maBias.push(((closes[i] - avg) / avg) * 100);
-        }
-    }
 
-    return [ma, maBias];
+            return result;
+        });
+    } catch (err) {
+        console.error('[getStockRank] 获取热股榜数据失败:', err);
+        throw err;
+    }
 }
 
-function calculateRSI(closes, period = 20) {
-    const rsiValues = [];
-    let gains = 0;
-    let losses = 0;
+async function getPlateRank(type = 'concept') {
+    try {
+        const response = await request.get('/fuyao/hot_list_data/out/hot_list/v1/plate', {type});
+        const data = extractData(response, 'plate_list');
 
-    for (let i = 0; i < closes.length; i++) {
-        if (i < period) {
-            rsiValues.push(null);
-            continue;
-        }
+        return data.map(d => {
+            //          - code: "881160"
+            // rise_and_fall: 1.4869
+            // etf_rise_and_fall: -0.1488
+            // hot_rank_chg: 0
+            // market_id: 48
+            // hot_tag: 连续11天上榜
+            // etf_product_id: "159766"
+            // rate: "10366.5"
+            // etf_name: 旅游ETF富国
+            // name: 旅游及酒店
+            // tag: 1家涨停
+            // etf_market_id: 36
+            // order: 20
+            return {
+                code: d.code,
+                name: d.name,
+                涨跌幅: d.rise_and_fall,
+                对应etf涨跌幅: d.etf_rise_and_fall,
+                热榜涨跌幅: d.hot_rank_chg,
+                热榜标签: d.hot_tag,
+                对应etf代码: d.etf_product_id,
+                讨论热度: d.rate,
+                对应etf名称: d.etf_name,
+                tag: d.tag,
+                排名: d.display_order != null ? d.display_order : d.order != null ? d.order : 0
+            };
+        });
+    } catch (err) {
+        console.error('[getPlateRank] 获取板块热榜数据失败:', err);
+        throw err;
+    }
+}
 
-        const change = closes[i] - closes[i - 1];
-        if (i === period) {
-            let sumGain = 0;
-            let sumLoss = 0;
-            for (let j = 1; j <= period; j++) {
-                const c = closes[j] - closes[j - 1];
-                if (c > 0) {
-                    sumGain += c;
-                } else {
-                    sumLoss += Math.abs(c);
-                }
+function extractData(response, listKey) {
+    if (response && response.data && response.data[listKey] && Array.isArray(response.data[listKey])) {
+        return response.data[listKey];
+    }
+    if (Array.isArray(response)) {
+        return response;
+    }
+    console.warn('[extractData] 未知的数据格式:', response);
+    return [];
+}
+
+async function getTurnoverData(type = 'day') {
+    try {
+        const minuteData = await getTurnoverDataByMinute();
+
+        const data = await request.get('/fuyao/market_analysis_api/chart/v1/get_chart_data', {
+            chart_key: 'turnover_day'
+        });
+
+        if (data && data.status_code === 0 && data.data && data.data.charts) {
+            const charts = data.data.charts;
+            const pointList = charts.point_list;
+
+            if (!pointList || pointList.length < 2) {
+                throw new Error('数据不足');
             }
-            gains = sumGain / period;
-            losses = sumLoss / period;
-        } else {
-            const currentGain = change > 0 ? change : 0;
-            const currentLoss = change < 0 ? Math.abs(change) : 0;
-            gains = (gains * (period - 1) + currentGain) / period;
-            losses = (losses * (period - 1) + currentLoss) / period;
+
+            const latest = pointList[pointList.length - 1];
+            const previous = pointList[pointList.length - 2];
+
+            const currentTurnover = latest[1];
+            const prevTurnover = previous[1];
+            const diff = currentTurnover - prevTurnover;
+            const currentYi = currentTurnover / 100000000; // 先转为亿
+            const currentWanYi = (currentYi / 10000).toFixed(2); // 再转为万亿
+            const diffYi = (Math.abs(diff) / 100000000).toFixed(2); // 转为亿
+            const formattedData = {
+                当前成交额: currentWanYi + '万亿',
+                变化量: (diff > 0 ? '增加' : '减少') + diffYi + '亿',
+                较上日: diff > 0 ? '增加' : '减少'
+            };
+            const isTrading = minuteData.isTrading;
+            //               '0': { val: 1623545300000, name: '当日成交额', key: 'turnover' },
+            //   '1': { val: 1668872000000, name: '昨日成交额', key: 'turnover_pre' },
+            //   '2': { val: -45326700000, name: '较昨日变动', key: 'turnover_change' },
+            //   '3': { val: 1623545300000, name: '预测全天成交额', key: 'predict_turnover' },
+            const rs = {};
+            minuteData.header.forEach((item, index) => {
+                rs[item.name] = item.val;
+            });
+
+            if (isTrading) {
+                return {
+                    是否正在盘中交易: isTrading ? '是' : '否',
+                    ...rs,
+                    minuteData
+                };
+            }
+            return {
+                ...formattedData,
+                是否正在盘中交易: isTrading ? '是' : '否',
+                ...rs,
+                minuteData
+            };
         }
 
-        if (gains + losses === 0) {
-            rsiValues.push(50);
-        } else {
-            const rs = gains / losses;
-            rsiValues.push(parseFloat((100 - 100 / (1 + rs)).toFixed(2)));
-        }
+        throw new Error('数据格式错误');
+    } catch (err) {
+        console.error('[getTurnoverData] 获取成交额数据失败:', err);
+        throw err;
     }
-
-    return rsiValues;
 }
 
-function percentile(p, arr) {
-    if (!arr.length) {
-        return 0;
-    }
-    const sorted = [...arr].sort((a, b) => a - b);
-    const index = Math.ceil((p / 100) * sorted.length) - 1;
-    return sorted[Math.max(0, index)];
-}
+async function getTurnoverDataByMinute() {
+    try {
+        const data = await request.get('/fuyao/market_analysis_api/chart/v1/get_chart_data', {
+            chart_key: 'turnover_minute'
+        });
 
-function calculateRollingScore(value, historyValues, lowPercentile, highPercentile) {
-    const validValues = historyValues.filter(v => v !== null && !isNaN(v));
-    if (validValues.length < DIVIDEND_SCORE_CONSTANTS.MIN_VALID_VALUES || value === null) {
-        return null;
-    }
-
-    const low = percentile(lowPercentile, validValues);
-    const high = percentile(highPercentile, validValues);
-
-    if (low === high) {
-        return 50;
-    }
-
-    let score = ((value - low) / (high - low)) * 100;
-    score = Math.max(DIVIDEND_SCORE_CONSTANTS.MIN_SCORE, Math.min(DIVIDEND_SCORE_CONSTANTS.MAX_SCORE, score));
-    return parseFloat(score.toFixed(2));
-}
-
-function calculateScores(data) {
-    const dataCopy = data.map(item => ({...item}));
-
-    const closes = dataCopy.map(d => d.close);
-    const {cs} = calculateEMA(DIVIDEND_SCORE_CONSTANTS.EMA_PERIOD, dataCopy);
-    const [_, ma80Bias] = calculateMA(DIVIDEND_SCORE_CONSTANTS.MA_PERIOD, dataCopy);
-    const rsi = calculateRSI(closes, DIVIDEND_SCORE_CONSTANTS.RSI_PERIOD);
-    for (let i = 0; i < dataCopy.length; i++) {
-        dataCopy[i].cs = cs[i] === '-' ? null : parseFloat(cs[i]);
-        dataCopy[i].ma80Bias = ma80Bias[i] === '-' ? null : parseFloat(ma80Bias[i]);
-        dataCopy[i].rsi = rsi[i];
-    }
-
-    const csValues = dataCopy.map(d => d.cs);
-    const ma80BiasValues = dataCopy.map(d => d.ma80Bias);
-
-    for (let i = 0; i < dataCopy.length; i++) {
-        const current = dataCopy[i];
-        if (current.cs === null || current.ma80Bias === null || current.rsi === null) {
-            current.csScore = null;
-            current.ma80Score = null;
-            current.rsiScore = null;
-            current.totalScore = null;
-            current.scoreMA = null;
-            continue;
+        if (data && data.status_code === 0 && data.data && data.data.charts) {
+            const charts = data.data.charts;
+            const e = formatThsVolumeTime(data.data);
+            const isTrading = isTradingNow(e.dataTimestamp);
+            return {
+                isTrading,
+                name: charts.name,
+                time: charts.mtime,
+                header: charts.header,
+                point_key_list: charts.point_key_list,
+                point_list: charts.point_list,
+                lines: charts.lines,
+                x_label_list: charts.x_label_list
+            };
         }
 
-        const startIdx = Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.ROLLING_WINDOW + 1);
-        const csHistory = csValues.slice(startIdx, i + 1);
-        const ma80History = ma80BiasValues.slice(startIdx, i + 1);
-
-        current.csScore = calculateRollingScore(
-            current.cs,
-            csHistory,
-            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
-            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
-        );
-        current.ma80Score = calculateRollingScore(
-            current.ma80Bias,
-            ma80History,
-            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
-            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
-        );
-        current.rsiScore = current.rsi;
-
-        if (current.csScore !== null && current.ma80Score !== null && current.rsiScore !== null) {
-            current.totalScore = parseFloat(
-                (
-                    current.csScore * DIVIDEND_SCORE_CONSTANTS.CS_WEIGHT +
-                    current.ma80Score * DIVIDEND_SCORE_CONSTANTS.MA80_WEIGHT +
-                    current.rsiScore * DIVIDEND_SCORE_CONSTANTS.RSI_WEIGHT
-                ).toFixed(2)
-            );
-        } else {
-            current.totalScore = null;
-        }
+        throw new Error('数据格式错误');
+    } catch (err) {
+        console.error('[getTurnoverDataByMinute] 获取成交额数据失败:', err);
+        throw err;
     }
-
-    for (let i = 0; i < dataCopy.length; i++) {
-        const current = dataCopy[i];
-        if (current.totalScore === null) {
-            current.scoreMA = null;
-            continue;
-        }
-
-        const scoreHistory = dataCopy
-            .slice(Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.SCORE_MA_PERIOD + 1), i + 1)
-            .filter(d => d.totalScore !== null)
-            .map(d => d.totalScore);
-
-        if (scoreHistory.length >= DIVIDEND_SCORE_CONSTANTS.SCORE_MA_PERIOD) {
-            current.scoreMA = parseFloat((scoreHistory.reduce((a, b) => a + b, 0) / scoreHistory.length).toFixed(2));
-        } else {
-            current.scoreMA = current.totalScore;
-        }
-    }
-
-    return dataCopy;
 }
 
 module.exports = {
@@ -370,5 +355,9 @@ module.exports = {
     getSecId,
     queryStockData,
     getPatternStocks,
-    getDividendScore
+    getDividendScore,
+    getStockRank,
+    getPlateRank,
+    getTurnoverData,
+    getTurnoverDataByMinute
 };

@@ -18,5 +18,7 @@ require('../commands/zdt')(program);
 require('../commands/secid')(program);
 require('../commands/search')(program);
 require('../commands/dividend')(program);
+require('../commands/hotrank')(program);
+require('../commands/turnover')(program);
 
 program.parse(process.argv);
