@@ -1,6 +1,6 @@
 {
     "name": "daxiapi-cli",
-    "version": "2.3.0",
+    "version": "2.3.3",
     "description": "大虾皮金融数据API命令行工具",
     "bin": {
         "daxiapi": "./bin/index.js",
@@ -20,6 +20,8 @@
     "license": "MIT",
     "dependencies": {
         "iconv-lite": "^0.5.0",
+        "request": "^2.88.0",
+        "request-promise-native": "^1.0.7",
         "@ksky521/html-picker": "^1.0.0",
         "@toon-format/toon": "^2.1.0",
         "axios": "^1.6.0",
