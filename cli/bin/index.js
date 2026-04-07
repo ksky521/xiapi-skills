@@ -21,5 +21,6 @@ require('../commands/dividend')(program);
 require('../commands/hotrank')(program);
 require('../commands/turnover')(program);
 require('../commands/report')(program);
+require('../commands/news')(program);
 
 program.parse(process.argv);

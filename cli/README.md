@@ -220,6 +220,19 @@ daxiapi report finance 600036
 daxiapi report finance 000001
 ```
 
+### 新闻数据
+
+```bash
+# 获取个股舆情（内部自动将 code 转为 secid）
+daxiapi news sentiment -c 600031 -p 20
+
+# 获取个股公告
+daxiapi news notice -c 600031 -p 20 -i 1
+
+# 获取个股研报（支持时间区间）
+daxiapi news report -c 600031 -p 25 -i 1 -b 2026-01-01 -e 2026-04-08
+```
+
 ### 工具
 
 ```bash

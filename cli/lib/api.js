@@ -339,6 +339,124 @@ async function getTurnoverDataByMinute() {
     }
 }
 
+function normalizeHttps(url) {
+    if (!url) {
+        return '';
+    }
+    return String(url).replace(/^http:\/\//, 'https://');
+}
+
+async function getNewsSentiment(secid, pageSize = 20) {
+    const response = await axios.get('https://np-listapi.eastmoney.com/comm/web/getListInfo', {
+        params: {
+            client: 'web',
+            biz: 'web_voice',
+            mTypeAndCode: secid,
+            pageSize,
+            type: 1,
+            req_trace: '3d4e684212bee1464c1b44611236955b',
+        },
+    });
+
+    const payload = response.data || {};
+    const list = payload.data?.list || [];
+    return {
+        pageIndex: payload.data?.page_index || 1,
+        pageSize: payload.data?.page_size || pageSize,
+        total: payload.data?.totle_hits || 0,
+        list: list.map((item) => ({
+            title: item.Art_Title,
+            showTime: item.Art_ShowTime,
+            artCode: item.Art_Code,
+            url: normalizeHttps(item.Art_Url),
+            originUrl: normalizeHttps(item.Art_OriginUrl),
+        })),
+    };
+}
+
+async function getNewsNotice(code, pageSize = 20, pageIndex = 1) {
+    const response = await axios.get('https://np-anotice-stock.eastmoney.com/api/security/ann', {
+        params: {
+            sr: -1,
+            page_size: pageSize,
+            page_index: pageIndex,
+            ann_type: 'A',
+            client_source: 'web',
+            stock_list: code,
+            f_node: 0,
+            s_node: 0,
+        },
+    });
+
+    const payload = response.data || {};
+    const data = payload.data || {};
+    const list = data.list || [];
+
+    return {
+        pageIndex: data.page_index || pageIndex,
+        pageSize: data.page_size || pageSize,
+        total: data.total_hits || 0,
+        list: list.map((item) => {
+            const stockCode = item.codes?.[0]?.stock_code || code;
+            return {
+                title: item.title,
+                noticeDate: item.notice_date,
+                displayTime: item.display_time,
+                artCode: item.art_code,
+                stockCode,
+                url: `https://data.eastmoney.com/notices/detail/${stockCode}/${item.art_code}.html`,
+                columns: (item.columns || []).map((column) => column.column_name),
+            };
+        }),
+    };
+}
+
+async function getNewsReport(code, pageSize = 25, pageIndex = 1, beginTime = '2026-01-01', endTime) {
+    const response = await axios.get('https://reportapi.eastmoney.com/report/list', {
+        params: {
+            pageNo: pageIndex,
+            pageSize,
+            code,
+            industryCode: '*',
+            industry: '*',
+            rating: '*',
+            ratingchange: '*',
+            beginTime,
+            endTime,
+            fields: '',
+            qType: 0,
+            sort: 'publishDate,desc',
+        },
+    });
+
+    const payload = response.data || {};
+    const list = payload.data || [];
+
+    return {
+        pageIndex: payload.pageNo || pageIndex,
+        pageSize: payload.size || pageSize,
+        total: payload.hits || 0,
+        list: list.map((item) => ({
+            title: item.title,
+            stockCode: item.stockCode,
+            stockName: item.stockName,
+            publishDate: item.publishDate,
+            orgName: item.orgName,
+            rating: item.emRatingName,
+            infoCode: item.infoCode,
+            predictNextTwoYearEps: item.predictNextTwoYearEps,
+            predictNextTwoYearPe: item.predictNextTwoYearPe,
+            predictNextYearEps: item.predictNextYearEps,
+            predictNextYearPe: item.predictNextYearPe,
+            predictThisYearEps: item.predictThisYearEps,
+            predictThisYearPe: item.predictThisYearPe,
+            predictLastYearEps: item.predictLastYearEps,
+            predictLastYearPe: item.predictLastYearPe,
+            url: `https://data.eastmoney.com/report/info/${item.infoCode}.html`,
+        })),
+    };
+}
+
 module.exports = {
     getMarketData,
     getMarketTemp,
@@ -361,5 +479,8 @@ module.exports = {
     getPlateRank,
     getTurnoverData,
     getTurnoverDataByMinute,
-    getFinanceReportDetail
+    getFinanceReportDetail,
+    getNewsSentiment,
+    getNewsNotice,
+    getNewsReport,
 };

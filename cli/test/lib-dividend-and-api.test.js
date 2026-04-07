@@ -43,6 +43,7 @@ function loadApiModule(overrides = {}) {
     const requestCalls = [];
     const requestResponses = [];
     let axiosGetImpl = async () => ({data: {k: '', name: ''}});
+    const axiosGetCalls = [];
 
     const axiosMock = {
         create: options => {
@@ -64,7 +65,10 @@ function loadApiModule(overrides = {}) {
                 }
             };
         },
-        get: (...args) => axiosGetImpl(...args)
+        get: (...args) => {
+            axiosGetCalls.push(args);
+            return axiosGetImpl(...args);
+        }
     };
 
     const requestMock = {
@@ -112,7 +116,8 @@ function loadApiModule(overrides = {}) {
         requestResponses,
         setAxiosGet(fn) {
             axiosGetImpl = fn;
-        }
+        },
+        axiosGetCalls
     };
 }
 
@@ -382,6 +387,90 @@ test('lib/api turnover helpers validate runtime branches and formatting', async 
     const badMinuteApi = loadApiModule();
     badMinuteApi.requestResponses.push({status_code: 1});
     await assert.rejects(() => badMinuteApi.api.getTurnoverDataByMinute(), /数据格式错误/);
+});
+
+test('lib/api news endpoints map URLs and params correctly', async () => {
+    const {api, setAxiosGet, axiosGetCalls} = loadApiModule();
+
+    setAxiosGet(async url => {
+        if (url.includes('np-listapi.eastmoney.com')) {
+            return {
+                data: {
+                    data: {
+                        page_index: 1,
+                        page_size: 5,
+                        totle_hits: 2,
+                        list: [
+                            {
+                                Art_Title: '舆情标题',
+                                Art_ShowTime: '2026-04-08 11:22:00',
+                                Art_Code: '202604083697759366',
+                                Art_Url: 'http://finance.eastmoney.com/a/202604083697759366.html',
+                                Art_OriginUrl: 'http://finance.eastmoney.com/news/1354,202604083697759366.html'
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+        if (url.includes('np-anotice-stock.eastmoney.com')) {
+            return {
+                data: {
+                    data: {
+                        page_index: 1,
+                        page_size: 5,
+                        total_hits: 1,
+                        list: [
+                            {
+                                art_code: 'AN202603271820804911',
+                                title: '公告标题',
+                                notice_date: '2026-03-27 00:00:00',
+                                display_time: '2026-03-27 10:00:00:000',
+                                codes: [{stock_code: '000010'}],
+                                columns: [{column_name: '重大事项'}]
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+        return {
+            data: {
+                hits: 1,
+                size: 5,
+                pageNo: 1,
+                data: [
+                    {
+                        title: '研报标题',
+                        stockCode: '600031',
+                        stockName: '三一重工',
+                        publishDate: '2026-03-31 00:00:00.000',
+                        orgName: '东吴证券股份有限公司',
+                        emRatingName: '买入',
+                        infoCode: 'AP202603311820915189'
+                    }
+                ]
+            }
+        };
+    });
+
+    const sentiment = await api.getNewsSentiment('1.600031', 5);
+    const notice = await api.getNewsNotice('600031', 5, 1);
+    const report = await api.getNewsReport('600031', 5, 1, '2026-01-01', '2026-04-08');
+
+    assert.equal(sentiment.total, 2);
+    assert.equal(sentiment.list[0].url, 'https://finance.eastmoney.com/a/202604083697759366.html');
+
+    assert.equal(notice.total, 1);
+    assert.equal(notice.list[0].url, 'https://data.eastmoney.com/notices/detail/000010/AN202603271820804911.html');
+
+    assert.equal(report.total, 1);
+    assert.equal(report.list[0].url, 'https://data.eastmoney.com/report/info/AP202603311820915189.html');
+
+    assert.equal(axiosGetCalls[0][0], 'https://np-listapi.eastmoney.com/comm/web/getListInfo');
+    assert.equal(axiosGetCalls[1][0], 'https://np-anotice-stock.eastmoney.com/api/security/ann');
+    assert.equal(axiosGetCalls[2][0], 'https://reportapi.eastmoney.com/report/list');
+    assert.equal(axiosGetCalls[2][1].params.sort, 'publishDate,desc');
 });
 
 test('lib/api rethrows request failures from hot lists and turnover fetches', async () => {

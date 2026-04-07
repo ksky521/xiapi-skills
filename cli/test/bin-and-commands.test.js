@@ -99,6 +99,18 @@ function createSharedMocks(overrides = {}) {
         getZdtPool: async (...args) => {
             apiCalls.push(['getZdtPool', ...args]);
             return [{code: '000001', type: args[1]}];
+        },
+        getNewsSentiment: async (...args) => {
+            apiCalls.push(['getNewsSentiment', ...args]);
+            return {list: [{title: '舆情标题', url: 'https://finance.eastmoney.com/a/202604033694480758.html'}]};
+        },
+        getNewsNotice: async (...args) => {
+            apiCalls.push(['getNewsNotice', ...args]);
+            return {list: [{title: '公告标题', url: 'https://data.eastmoney.com/notices/detail/000010/AN202603271820804911.html'}]};
+        },
+        getNewsReport: async (...args) => {
+            apiCalls.push(['getNewsReport', ...args]);
+            return {list: [{title: '研报标题', url: 'https://data.eastmoney.com/report/info/AP202603311820915189.html'}]};
         }
     };
 
@@ -132,7 +144,7 @@ function createSharedMocks(overrides = {}) {
             encode: data => JSON.stringify(data)
         },
         '../lib/utils': {
-            getSecid: code => ({input: code, secid: `secid:${code}`})
+            getSecid: code => `secid:${code}`
         },
         ...overrides
     };
@@ -150,7 +162,7 @@ test('bin/index registers all commands and parses argv', () => {
     const invoked = [];
     const commandModules = {};
 
-    ['config', 'market', 'sector', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report'].forEach(
+    ['config', 'market', 'sector', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news'].forEach(
         name => {
             commandModules[`../commands/${name}`] = currentProgram => {
                 invoked.push({name, currentProgram});
@@ -169,7 +181,7 @@ test('bin/index registers all commands and parses argv', () => {
     assert.equal(program.versionValue, '9.9.9');
     assert.deepEqual(
         invoked.map(item => item.name),
-        ['config', 'market', 'sector', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report']
+        ['config', 'market', 'sector', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news']
     );
     assert.ok(invoked.every(item => item.currentProgram === program));
     assert.ok(Array.isArray(program.parsedArgv));
@@ -331,6 +343,54 @@ test('report command wraps finance detail as toon output and validates code', as
     assert.equal(errorCalls.length, 1);
 });
 
+test('news commands return url-friendly payloads and validate params', async t => {
+    const {mocks, apiCalls, errorCalls} = createSharedMocks();
+    const program = createProgramMock();
+    loadWithMocks(projectPath('commands', 'news.js'), mocks)(program);
+
+    const log = captureConsole('log');
+    t.after(() => log.restore());
+
+    await getCommand(program, 'news sentiment').actionFn({code: '600031', pageSize: '5'});
+    await getCommand(program, 'news notice').actionFn({code: '600031', pageSize: '5', pageIndex: '1'});
+    await getCommand(program, 'news report').actionFn({
+        code: '600031',
+        pageSize: '5',
+        pageIndex: '1',
+        beginTime: '2026-01-01',
+        endTime: '2026-04-08'
+    });
+
+    assert.deepEqual(apiCalls.slice(0, 3), [
+        ['getNewsSentiment', 'secid:600031', 5],
+        ['getNewsNotice', '600031', 5, 1],
+        ['getNewsReport', '600031', 5, 1, '2026-01-01', '2026-04-08']
+    ]);
+    assert.equal(log.calls[0][0], '```toon\n{"list":[{"title":"舆情标题","url":"https://finance.eastmoney.com/a/202604033694480758.html"}]}\n```');
+    assert.equal(log.calls[1][0], '```toon\n{"list":[{"title":"公告标题","url":"https://data.eastmoney.com/notices/detail/000010/AN202603271820804911.html"}]}\n```');
+    assert.equal(log.calls[2][0], '```toon\n{"list":[{"title":"研报标题","url":"https://data.eastmoney.com/report/info/AP202603311820915189.html"}]}\n```');
+
+    const exitStub = createExitStub();
+    t.after(() => exitStub.restore());
+
+    await assert.rejects(
+        () => getCommand(program, 'news sentiment').actionFn({code: '600031', pageSize: '0'}),
+        assertExitError
+    );
+    await assert.rejects(
+        () =>
+            getCommand(program, 'news report').actionFn({
+                code: '600031',
+                pageSize: '5',
+                pageIndex: '1',
+                beginTime: '20260101',
+                endTime: '2026-04-08'
+            }),
+        assertExitError
+    );
+    assert.equal(errorCalls.length, 2);
+});
+
 test('search and secid commands validate data formatting', async t => {
     const shared = createSharedMocks();
     const searchProgram = createProgramMock();
@@ -343,7 +403,7 @@ test('search and secid commands validate data formatting', async t => {
     const secidProgram = createProgramMock();
     loadWithMocks(projectPath('commands', 'secid.js'), secidShared.mocks)(secidProgram);
     await getCommand(secidProgram, 'secid').actionFn('BK0428');
-    assert.deepEqual(secidShared.outputCalls[0], {input: 'BK0428', secid: 'secid:BK0428'});
+    assert.equal(secidShared.outputCalls[0], 'secid:BK0428');
 
     const exitStub = createExitStub();
     t.after(() => exitStub.restore());
