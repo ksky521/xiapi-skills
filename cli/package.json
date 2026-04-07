@@ -1,37 +1,39 @@
 {
-  "name": "daxiapi-cli",
-  "version": "2.2.0",
-  "description": "大虾皮金融数据API命令行工具",
-  "bin": {
-    "daxiapi": "./bin/index.js",
-    "dxp": "./bin/index.js"
-  },
-  "scripts": {
-    "test": "node bin/index.js --help"
-  },
-  "keywords": [
-    "stock",
-    "api",
-    "daxiapi",
-    "cli",
-    "finance"
-  ],
-  "author": "daxiapi.com",
-  "license": "MIT",
-  "dependencies": {
-    "@toon-format/toon": "^2.1.0",
-    "axios": "^1.6.0",
-    "chalk": "^4.1.2",
-    "commander": "^11.1.0",
-    "conf": "^10.2.0"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "files": [
-    "bin",
-    "commands",
-    "lib",
-    "README.md"
-  ]
+    "name": "daxiapi-cli",
+    "version": "2.2.0",
+    "description": "大虾皮金融数据API命令行工具",
+    "bin": {
+        "daxiapi": "./bin/index.js",
+        "dxp": "./bin/index.js"
+    },
+    "scripts": {
+        "test": "node bin/index.js --help"
+    },
+    "keywords": [
+        "stock",
+        "api",
+        "daxiapi",
+        "cli",
+        "finance"
+    ],
+    "author": "daxiapi.com",
+    "license": "MIT",
+    "dependencies": {
+        "iconv-lite": "^0.5.0",
+        "@ksky521/html-picker": "^1.0.0",
+        "@toon-format/toon": "^2.1.0",
+        "axios": "^1.6.0",
+        "chalk": "^4.1.2",
+        "commander": "^11.1.0",
+        "conf": "^10.2.0"
+    },
+    "engines": {
+        "node": ">=14.0.0"
+    },
+    "files": [
+        "bin",
+        "commands",
+        "lib",
+        "README.md"
+    ]
 }

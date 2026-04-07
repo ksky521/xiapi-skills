@@ -1,8 +1,8 @@
 const config = require('../lib/config');
-const { handleError, createParameterError } = require('../lib/error');
+const {handleError, createParameterError} = require('../lib/error');
 
-module.exports = function(program) {
-    const configCmd = program.command('config');
+module.exports = function (program) {
+    const configCmd = program.command('config').description('配置管理，添加daxiapi.com接口api_token');
 
     configCmd
         .command('set <key> <value>')
@@ -12,14 +12,8 @@ module.exports = function(program) {
                 if (!key || !value) {
                     throw createParameterError(
                         '参数无效',
-                        [
-                            "参数 'key' 不能为空",
-                            "参数 'value' 不能为空"
-                        ],
-                        [
-                            'daxiapi config set token YOUR_TOKEN',
-                            'daxiapi config set baseUrl https://daxiapi.com'
-                        ]
+                        ["参数 'key' 不能为空", "参数 'value' 不能为空"],
+                        ['daxiapi config set token YOUR_TOKEN', 'daxiapi config set baseUrl https://daxiapi.com']
                     );
                 }
 
@@ -47,14 +41,10 @@ module.exports = function(program) {
     configCmd
         .command('delete <key>')
         .description('删除配置项')
-        .action((key) => {
+        .action(key => {
             try {
                 if (!key) {
-                    throw createParameterError(
-                        '参数无效',
-                        ["参数 'key' 不能为空"],
-                        ['daxiapi config delete token']
-                    );
+                    throw createParameterError('参数无效', ["参数 'key' 不能为空"], ['daxiapi config delete token']);
                 }
 
                 config.delete(key);

@@ -34,7 +34,9 @@ const SUPPORTED_PATTERNS = [
 ];
 
 module.exports = function (program) {
-    const stockCmd = program.command('stock');
+    const stockCmd = program
+        .command('stock')
+        .description('获取A股个股详情、概念股成分、技术形态选股等多维度股票数据，用于个股分析与量化筛选。');
 
     stockCmd
         .command('info')
@@ -71,7 +73,7 @@ module.exports = function (program) {
     stockCmd
         .command('gn <gnId>')
         .description(
-            '根据概念板块ID获取该概念下的所有股票数据，支持同花顺(881155)和东方财富(BK0428)两种格式的板块ID。' +
+            '根据概念板块ID获取该概念下的所有股票数据，支持同花顺(8开头code)和东方财富(BK开头)两种格式的板块ID。' +
                 '自动根据ID格式选择数据源，返回股票名称、代码、涨跌幅、CS强度、SCTR排名等详细信息，最多返回300只股票。' +
                 '可用于概念板块成分股分析和板块内股票筛选。'
         )

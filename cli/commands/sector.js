@@ -4,7 +4,11 @@ const {handleError, createParameterError} = require('../lib/error');
 const {output} = require('../lib/output');
 
 module.exports = function (program) {
-    const sectorCmd = program.command('sector');
+    const sectorCmd = program
+        .command('sector')
+        .description(
+            '获取A股板块热力图、行业板块、概念板块、板块内个股排名等多维度板块数据，用于板块轮动分析与热点追踪。'
+        );
 
     sectorCmd
         .command('heatmap')

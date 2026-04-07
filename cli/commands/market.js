@@ -4,7 +4,11 @@ const {handleError} = require('../lib/error');
 const {output} = require('../lib/output');
 
 module.exports = function (program) {
-    const marketCmd = program.command('market');
+    const marketCmd = program
+        .command('market')
+        .description(
+            '获取A股市场全景数据，涵盖指数行情、市场温度、风格轮动、估值水平等多维度分析，用于市场整体研判与投资决策辅助。'
+        );
 
     marketCmd
         .command('index')
@@ -93,6 +97,4 @@ module.exports = function (program) {
                 process.exit(1);
             }
         });
-
-
 };

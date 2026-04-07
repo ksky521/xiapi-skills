@@ -3,7 +3,9 @@ const {handleError} = require('../lib/error');
 const {output, encode} = require('../lib/output');
 
 module.exports = function (program) {
-    const hotrankCmd = program.command('hotrank');
+    const hotrankCmd = program
+        .command('hotrank')
+        .description('获取A股热股榜、概念板块热榜、行业板块热榜数据，用于发现市场热点与资金流向。');
 
     hotrankCmd
         .command('stock')

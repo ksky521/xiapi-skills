@@ -4,7 +4,9 @@ const {handleError} = require('../lib/error');
 const {output} = require('../lib/output');
 
 module.exports = function (program) {
-    const dividendCmd = program.command('dividend');
+    const dividendCmd = program
+        .command('dividend')
+        .description('获取红利类指数打分数据，用于判断红利指数超买超卖状态与投资机会。');
 
     dividendCmd
         .command('score')

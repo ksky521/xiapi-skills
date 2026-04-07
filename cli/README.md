@@ -164,6 +164,51 @@ daxiapi zdt
 daxiapi zdt --type dt
 ```
 
+### 成交额
+
+```bash
+# 获取A股市场成交额数据
+daxiapi turnover
+```
+
+### 热榜数据
+
+```bash
+# 热股榜（默认：1小时、大家都在看）
+daxiapi hotrank stock
+
+# 热股榜 - 24小时维度
+daxiapi hotrank stock --type day
+
+# 热股榜 - 快速飙升个股
+daxiapi hotrank stock --list-type skyrocket
+
+# 热股榜 - 趋势投资派关注个股
+daxiapi hotrank stock --list-type trend
+
+# 热股榜 - 价值派关注个股
+daxiapi hotrank stock --list-type value
+
+# 热股榜 - 技术派关注个股
+daxiapi hotrank stock --list-type tech
+
+# 概念板块热榜
+daxiapi hotrank concept
+
+# 行业板块热榜
+daxiapi hotrank board
+```
+
+#### 热股榜榜单类型（list-type）
+
+| 榜单类型 | 说明 |
+|---------|------|
+| normal | 大家都在看（默认） |
+| skyrocket | 快速飙升个股 |
+| trend | 趋势投资派关注个股 |
+| value | 价值派关注个股 |
+| tech | 技术派关注个股 |
+
 ### 工具
 
 ```bash
