@@ -18,7 +18,7 @@ metadata:
 通过 `daxiapi-cli` 的 `market compass` 命令获取数据：
 
 ```bash
-daxiapi market compass
+npx daxiapi-cli@latest market compass
 ```
 
 返回格式示例：

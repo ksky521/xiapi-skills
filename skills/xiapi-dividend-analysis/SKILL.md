@@ -41,13 +41,13 @@ description: '分析红利类指数投资机会，基于打分算法判断超买
 **跳过条件**：Token 已配置且有效，确认已经配置了 Token 则跳过该步骤
 
 ```bash
-daxiapi config get token
+npx daxiapi-cli@latest config get token
 ```
 
 如未配置，访问 [daxiapi.com](https://daxiapi.com) 获取 Token 后执行：
 
 ```bash
-daxiapi config set token YOUR_TOKEN_FROM_DAXIAPI
+npx daxiapi-cli@latest config set token YOUR_TOKEN_FROM_DAXIAPI
 ```
 
 ---
@@ -69,7 +69,7 @@ daxiapi config set token YOUR_TOKEN_FROM_DAXIAPI
 - 用户泛泛询问（如"红利指数怎么样"）→ 查询全部4只，做横向对比
 
 ```bash
-daxiapi dividend score -c <code>
+npx daxiapi-cli@latest dividend score -c <code>
 ```
 
 返回最近60个交易日的 `日期、分数、cs值、rsi值`。
