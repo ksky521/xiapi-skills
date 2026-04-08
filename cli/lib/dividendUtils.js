@@ -1,7 +1,7 @@
 const DIVIDEND_SCORE_CONSTANTS = {
     ROLLING_WINDOW: 440,
-    PERCENTILE_LOW: 5,
-    PERCENTILE_HIGH: 95,
+    PERCENTILE_LOW: 0,
+    PERCENTILE_HIGH: 100,
     SCORE_MA_PERIOD: 5,
     EMA_PERIOD: 20,
     MA_PERIOD: 80,
@@ -140,6 +140,7 @@ function calculateScores(data) {
 
     const csValues = dataCopy.map(d => d.cs);
     const ma80BiasValues = dataCopy.map(d => d.ma80Bias);
+    const rsiValues = dataCopy.map(d => d.rsi);
 
     for (let i = 0; i < dataCopy.length; i++) {
         const current = dataCopy[i];
@@ -155,6 +156,7 @@ function calculateScores(data) {
         const startIdx = Math.max(0, i - DIVIDEND_SCORE_CONSTANTS.ROLLING_WINDOW + 1);
         const csHistory = csValues.slice(startIdx, i + 1);
         const ma80History = ma80BiasValues.slice(startIdx, i + 1);
+        const rsiHistory = rsiValues.slice(startIdx, i + 1);
 
         current.csScore = calculateRollingScore(
             current.cs,
@@ -168,7 +170,12 @@ function calculateScores(data) {
             DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
             DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
         );
-        current.rsiScore = current.rsi;
+        current.rsiScore = calculateRollingScore(
+            current.rsi,
+            rsiHistory,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_LOW,
+            DIVIDEND_SCORE_CONSTANTS.PERCENTILE_HIGH
+        );
 
         if (current.csScore !== null && current.ma80Score !== null && current.rsiScore !== null) {
             current.totalScore = parseFloat(

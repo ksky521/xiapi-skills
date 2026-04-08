@@ -107,6 +107,10 @@ async function getSecId(token, code) {
     const client = createClient(token);
     return post(client, '/get_sec_id', {code});
 }
+async function getCompassData(token, ) {
+    const client = createClient(token);
+    return get(client, '/get_market_compass');
+}
 
 async function queryStockData(token, q, type = 'stock') {
     const client = createClient(token);
@@ -146,8 +150,8 @@ async function getDividendScore(token, code) {
         scores: recentScores.map(item => ({
             date: item.date,
             score: item.totalScore,
-            cs: item.cs.toFixed(2),
-            rsi: item.rsi.toFixed(2)
+            cs: item.cs != null ? item.cs.toFixed(2) : null,
+            rsi: item.rsi != null ? item.rsi.toFixed(2) : null
         }))
     };
 }
@@ -441,6 +445,7 @@ async function getNewsReport(code, pageSize = 25, pageIndex = 1, beginTime = '20
 module.exports = {
     getMarketData,
     getMarketTemp,
+    getCompassData,
     getMarketStyle,
     getMarketValueData,
     getBkData,

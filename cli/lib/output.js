@@ -8,7 +8,10 @@ function output(data) {
         console.log('[60]{"日期","分数","cs值","rsi值"}:');
 
         data.scores.forEach(item => {
-            console.log(`  ${item.date},${item.score || '-'},${item.cs || '-'},${item.rsi || '-'}`);
+            const score = item.score != null ? item.score : '-';
+            const cs = item.cs != null ? item.cs : '-';
+            const rsi = item.rsi != null ? item.rsi : '-';
+            console.log(`  ${item.date},${score},${cs},${rsi}`);
         });
 
         console.log('```');

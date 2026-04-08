@@ -31,7 +31,24 @@ module.exports = function (program) {
                 process.exit(1);
             }
         });
+    marketCmd.command('compass')
+        .description('获取市场整合趋势结构、估值、情绪三层指标，用于A股市场三维结构分析系统，给出市场当前状态的综合判断与操作建议')
+        .action(async () => {
+            try {
+                const token = config.getToken();
+                if (!token) {
+                    const error = new Error('未配置 API Token');
+                    error.response = {status: 401};
+                    throw error;
+                }
 
+                const data = await api.getCompassData(token);
+                output(data);
+            } catch (error) {
+                handleError(error);
+                process.exit(1);
+            }
+        });
     marketCmd
         .command('temp')
         .description(
