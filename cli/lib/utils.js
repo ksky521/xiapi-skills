@@ -78,10 +78,29 @@ const formatThsVolumeTime = e => {
         dataTimestamp: h
     };
 };
+
+function formatSecucode(code) {
+    code = String(code);
+    if (code.includes('.')) {
+        const parts = code.split('.');
+        const stockCode = parts[0];
+        const suffix = parts[1].toUpperCase();
+        if (suffix === 'SH' || suffix === 'SZ') {
+            return `${stockCode}.${suffix}`;
+        }
+        return `${stockCode}.${suffix === '1' ? 'SH' : 'SZ'}`;
+    }
+    if (code[0] === '6' || code[0] === '5') {
+        return `${code}.SH`;
+    }
+    return `${code}.SZ`;
+}
+
 module.exports = {
     isWeekday,
     isTradingTime,
     isTradingNow,
     formatThsVolumeTime,
-    getSecid
+    getSecid,
+    formatSecucode
 };

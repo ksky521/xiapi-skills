@@ -483,3 +483,65 @@ test('lib/api rethrows request failures from hot lists and turnover fetches', as
     errorLog.restore();
     assert.ok(errorLog.calls.length >= 3);
 });
+
+test('lib/api getCapitalFlow fetches data from eastmoney and formats output', async () => {
+    const {api, setAxiosGet, axiosGetCalls} = loadApiModule();
+
+    setAxiosGet(async url => {
+        if (url.includes('datacenter-web.eastmoney.com')) {
+            return {
+                data: {
+                    success: true,
+                    result: {
+                        count: 2,
+                        data: [
+                            {
+                                SECUCODE: '600031.SH',
+                                TRADE_DATE: '2026-04-09 00:00:00',
+                                CAPITAL_FLOWS: 70085269,
+                                CAPITAL_FLOWS_5DAYS: 65163950,
+                                BOARD_CAPITAL_FLOWS: -203272970,
+                                BOARD_CAPITAL_5FLOWS: -235436357,
+                                BOARD_CODE: '739',
+                                BOARD_NAME: '工程机械',
+                                CAPITAL_FLOWS_RATIO: 0.04,
+                                CAPITAL_FLOWS_5DAYSRATIO: 0.04
+                            },
+                            {
+                                SECUCODE: '600031.SH',
+                                TRADE_DATE: '2026-04-08 00:00:00',
+                                CAPITAL_FLOWS: 190635120,
+                                CAPITAL_FLOWS_5DAYS: 231122457,
+                                BOARD_CAPITAL_FLOWS: 822637369,
+                                BOARD_CAPITAL_5FLOWS: 445159984,
+                                BOARD_CODE: '739',
+                                BOARD_NAME: '工程机械',
+                                CAPITAL_FLOWS_RATIO: 0.11,
+                                CAPITAL_FLOWS_5DAYSRATIO: 0.13
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+        return {data: {}};
+    });
+
+    await assert.rejects(() => api.getCapitalFlow(''), /Invalid code/);
+
+    const result = await api.getCapitalFlow('600031', 2);
+    assert.equal(result.code, '600031.SH');
+    assert.equal(result.total, 2);
+    assert.equal(result.list.length, 2);
+    assert.equal(result.list[0].tradeDate, '2026-04-09 00:00:00');
+    assert.equal(result.list[0].capitalFlows, 70085269);
+    assert.equal(result.list[0].boardName, '工程机械');
+    assert.equal(result.list[0].capitalFlowsRatio, 0.04);
+
+    assert.equal(axiosGetCalls[0][0], 'https://datacenter-web.eastmoney.com/api/data/v1/get');
+    assert.equal(axiosGetCalls[0][1].params.reportName, 'PRT_STOCK_CAPITALFLOWS');
+    assert.equal(axiosGetCalls[0][1].params.pageSize, 2);
+
+    const szResult = await api.getCapitalFlow('000001', 5);
+    assert.equal(szResult.code, '000001.SZ');
+});

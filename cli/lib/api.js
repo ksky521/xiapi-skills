@@ -1,7 +1,7 @@
 const axios = require('axios');
 const config = require('./config');
 const request = require('./request');
-const {formatThsVolumeTime, isTradingNow} = require('./utils');
+const {formatThsVolumeTime, isTradingNow, formatSecucode} = require('./utils');
 const {calculateScores} = require('./dividendUtils');
 const getFinanceReportDetail = require('./caibao');
 
@@ -115,6 +115,48 @@ async function getCompassData(token, ) {
 async function queryStockData(token, q, type = 'stock') {
     const client = createClient(token);
     return post(client, '/query_stock_data', {q, type});
+}
+
+
+
+async function getCapitalFlow(code, days =10) {
+    if (!code || typeof code !== 'string') {
+        throw new Error('Invalid code: code must be a non-empty string');
+    }
+
+    const secucode = formatSecucode(code);
+    const response = await axios.get('https://datacenter-web.eastmoney.com/api/data/v1/get', {
+        params: {
+            callback: '',
+            reportName: 'PRT_STOCK_CAPITALFLOWS',
+            columns: 'ALL',
+            filter: `(SECUCODE="${secucode}")`,
+            pageNumber: 1,
+            pageSize: days,
+            sortTypes: -1,
+            sortColumns: 'TRADE_DATE',
+            source: 'WEB',
+            client: 'WEB'
+        }
+    });
+
+    const payload = response.data || {};
+    if (!payload.success || !payload.result || !payload.result.data) {
+        throw new Error('Failed to get capital flow data');
+    }
+
+    const data = payload.result.data;
+    return data.map(item => ({
+            date: item.TRADE_DATE,
+            当日资金流入: item.CAPITAL_FLOWS,
+            '当日资金流入占比': item.CAPITAL_FLOWS_RATIO,
+            '5日资金流入金额': item.CAPITAL_FLOWS_5DAYS,
+            '5日资金流入占比': item.CAPITAL_FLOWS_5DAYSRATIO,
+            '板块资金流入': item.BOARD_CAPITAL_FLOWS,
+            '5日板块资金流入金额': item.BOARD_CAPITAL_5FLOWS,
+            '板块代码': item.BOARD_CODE,
+            '板块名称': item.BOARD_NAME,
+        }))
 }
 
 async function getPatternStocks(token, pattern) {
@@ -276,15 +318,13 @@ async function getTurnoverData(type = 'day') {
             if (isTrading) {
                 return {
                     是否正在盘中交易: isTrading ? '是' : '否',
-                    ...rs,
-                    minuteData
+                    ...rs
                 };
             }
             return {
                 ...formattedData,
                 是否正在盘中交易: isTrading ? '是' : '否',
-                ...rs,
-                minuteData
+                ...rs
             };
         }
 
@@ -443,6 +483,7 @@ async function getNewsReport(code, pageSize = 25, pageIndex = 1, beginTime = '20
 }
 
 module.exports = {
+    getCapitalFlow,
     getMarketData,
     getMarketTemp,
     getCompassData,
