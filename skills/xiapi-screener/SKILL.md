@@ -184,7 +184,7 @@ npx daxiapi-cli@latest stock pattern vcp
 
 **报告日期**：[YYYY-MM-DD]
 **筛选形态**：[形态名称]
-**数据更新时间**：[收盘后更新]
+**数据日期**：[YYYY-MM-DD]（收盘后更新，必填具体交易日）
 
 ---
 

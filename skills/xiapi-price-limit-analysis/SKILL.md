@@ -157,7 +157,7 @@ npx daxiapi-cli@latest zdt --type zt
 ### 涨跌停分析报告
 
 **报告日期**：[YYYY-MM-DD]
-**数据更新时间**：[收盘后更新]
+**数据日期**：[YYYY-MM-DD]（收盘后更新，必填具体交易日）
 
 ---
 
