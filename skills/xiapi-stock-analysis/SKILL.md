@@ -471,19 +471,19 @@ npx daxiapi-cli@latest stock capital-flow <code>
 ### 本 Skill 资源文件
 
 - **CLI 命令参考**
-  - 优先定位：`skills/xiapi-stock-analysis/references/cli-commands.md`
+  - 优先定位：`references/cli-commands.md`
   - 兜底方式：在当前环境搜索 `# CLI 命令参考`
 
 - **策略逻辑信号表**
-  - 优先定位：`skills/xiapi-stock-analysis/references/strategy-signals.md`
+  - 优先定位：`references/strategy-signals.md`
   - 兜底方式：在当前环境搜索 `# 策略逻辑信号表`
 
 - **错误处理指南**
-  - 优先定位：`skills/xiapi-stock-analysis/references/error-handling.md`
+  - 优先定位：`references/error-handling.md`
   - 兜底方式：在当前环境搜索 `# 错误处理指南`
 
 - **报告模板**
-  - 优先定位：`skills/xiapi-stock-analysis/assets/report-template.md`
+  - 优先定位：`assets/report-template.md`
   - 兜底方式：在当前环境搜索 `# 个股分析报告模板`
 
 ### 关联 Skill 与触发说明
