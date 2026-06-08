@@ -29,6 +29,9 @@ Thumbs.db
 build/
 dist/
 
+# Archive files
+*.zip
+
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
