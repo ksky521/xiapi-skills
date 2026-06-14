@@ -91,9 +91,33 @@ daxiapi sector gn
 
 # 热门概念板块（东方财富数据源）
 daxiapi sector gn --type dfcf
+
+# 行业板块详情（通过板块ID查询）
+daxiapi sector bk_info --code BK0428
+
+# 行业板块详情（通过板块名称查询，支持模糊匹配）
+daxiapi sector bk_info --name 工程建筑
+
+# 行业板块详情（指定数据源）
+daxiapi sector bk_info --type ths --name 工程建筑
+
+# 概念板块详情（通过板块ID查询）
+daxiapi sector gn_info --code GN123
+
+# 概念板块详情（通过板块名称查询，支持模糊匹配）
+daxiapi sector gn_info --name 人工智能
+
+# 概念板块详情（指定数据源）
+daxiapi sector gn_info --type ths --name 人工智能
 ```
 
 **sector stocks 排序字段**：`cs`（CS强度）、`zdf`（涨跌幅）、`sm`（市值）、`cg`（成交额）、`cr`（换手率）、`sctr`（SCTR排名）
+
+**bk_info/gn_info 说明**：
+- `bk_info`：查询行业板块详情，返回CS强度、多日涨跌幅、市场宽度、主力资金净流入等数据
+- `gn_info`：查询概念板块详情，返回CS强度、多日涨跌幅、涨幅7%以上股票数、突破箱体股票数等数据
+- 支持通过 `--code`（板块ID）或 `--name`（板块名称，模糊匹配）查询
+- `--type` 可选数据源：`dfcf`（东方财富）或 `ths`（同花顺）
 
 ---
 
