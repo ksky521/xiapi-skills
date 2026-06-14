@@ -62,7 +62,14 @@ async function getBkData(token) {
     const client = createClient(token);
     return get(client, '/get_bk_data');
 }
-
+async function getBkInfo(token, type, code, name) {
+    const client = createClient(token);
+    return post(client, '/get_bk_info', { type, code, name });
+}
+async function getGnInfo(token, type, code, name) {
+    const client = createClient(token);
+    return post(client, '/get_gn_info', { type, code, name });
+}
 async function getSectorData(token, orderBy = 'cs', limit = 5) {
     const client = createClient(token);
     return post(client, '/get_sector_data', {orderBy, lmt: limit});
@@ -485,6 +492,8 @@ async function getNewsReport(code, pageSize = 25, pageIndex = 1, beginTime = '20
 module.exports = {
     getCapitalFlow,
     getMarketData,
+    getBkInfo,
+    getGnInfo,
     getMarketTemp,
     getCompassData,
     getMarketStyle,

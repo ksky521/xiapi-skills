@@ -7,7 +7,7 @@ module.exports = function (program) {
     const sectorCmd = program
         .command('sector')
         .description(
-            '获取A股板块热力图、行业板块、概念板块、板块内个股排名等多维度板块数据，用于板块轮动分析与热点追踪。'
+            '获取A股板块热力图、行业板块（详情）、概念板块（详情）、板块内个股排名等多维度板块数据，用于板块轮动分析与热点追踪。支持同花顺和东方财富分类。'
         );
 
     sectorCmd
@@ -51,6 +51,7 @@ module.exports = function (program) {
                 process.exit(1);
             }
         });
+
 
     sectorCmd
         .command('stocks')
@@ -116,6 +117,84 @@ module.exports = function (program) {
                 }
 
                 const data = await api.getGnHot(token, options.type);
+                output(data);
+            } catch (error) {
+                handleError(error);
+                process.exit(1);
+            }
+        });
+
+    sectorCmd
+        .command('bk_info')
+        .description('获取A股行业板块详情数据，支持同花顺(ths)和东方财富(dfcf)两个数据源。可通过板块ID(code)或板块名称(name)查询，返回板块的CS强度、多日涨跌幅、市场宽度、主力资金净流入等详细数据。可用于板块深度分析和资金流向追踪。')
+        .option('--type <type>', '数据源类型 (dfcf|ths)', 'dfcf')
+        .option('--code <bkCode>', '板块ID')
+        .option('--name <bkName>', '板块名称（支持模糊匹配）')
+        .action(async options => {
+            try {
+                const token = config.getToken();
+                if (!token) {
+                    const error = new Error('未配置 API Token');
+                    error.response = { status: 401 };
+                    throw error;
+                }
+
+                if (!['dfcf', 'ths'].includes(options.type)) {
+                    throw createParameterError(
+                        '参数无效',
+                        ["参数 'type' 必须是 dfcf 或 ths"],
+                        ['daxiapi sector bk_info --type ths', 'daxiapi sector bk_info --type dfcf']
+                    );
+                }
+
+                if (!options.code && !options.name) {
+                    throw createParameterError(
+                        '参数缺失',
+                        ['必须提供 --code 或 --name 参数'],
+                        ['daxiapi sector bk_info --code BK0428', 'daxiapi sector bk_info --name 工程建筑']
+                    );
+                }
+
+                const data = await api.getBkInfo(token, options.type, options.code, options.name);
+                output(data);
+            } catch (error) {
+                handleError(error);
+                process.exit(1);
+            }
+        });
+
+    sectorCmd
+        .command('gn_info')
+        .description('获取A股概念板块详情数据，支持同花顺(ths)和东方财富(dfcf)两个数据源。可通过板块ID(code)或板块名称(name)查询，返回板块的CS强度、多日涨跌幅、涨幅7%以上股票数、突破箱体股票数等详细数据。可用于概念板块深度分析和热点追踪。')
+        .option('--type <type>', '数据源类型 (dfcf|ths)', 'dfcf')
+        .option('--code <gnCode>', '概念板块ID')
+        .option('--name <gnName>', '概念板块名称（支持模糊匹配）')
+        .action(async options => {
+            try {
+                const token = config.getToken();
+                if (!token) {
+                    const error = new Error('未配置 API Token');
+                    error.response = { status: 401 };
+                    throw error;
+                }
+
+                if (!['dfcf', 'ths'].includes(options.type)) {
+                    throw createParameterError(
+                        '参数无效',
+                        ["参数 'type' 必须是 dfcf 或 ths"],
+                        ['daxiapi sector gn_info --type ths', 'daxiapi sector gn_info --type dfcf']
+                    );
+                }
+
+                if (!options.code && !options.name) {
+                    throw createParameterError(
+                        '参数缺失',
+                        ['必须提供 --code 或 --name 参数'],
+                        ['daxiapi sector gn_info --code 888123', 'daxiapi sector gn_info --name 人工智能']
+                    );
+                }
+
+                const data = await api.getGnInfo(token, options.type, options.code, options.name);
                 output(data);
             } catch (error) {
                 handleError(error);
