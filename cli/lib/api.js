@@ -124,6 +124,11 @@ async function queryStockData(token, q, type = 'stock') {
     return post(client, '/query_stock_data', {q, type});
 }
 
+async function querySqlStocks(token, conditions, orderBy, limit) {
+    const client = createClient(token);
+    return post(client, '/sql_query', { conditions, orderBy, limit });
+}
+
 
 
 async function getCapitalFlow(code, days =10) {
@@ -509,6 +514,7 @@ module.exports = {
     getZdtPool,
     getSecId,
     queryStockData,
+    querySqlStocks,
     getPatternStocks,
     getDividendScore,
     getStockRank,

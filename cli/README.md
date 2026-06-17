@@ -188,6 +188,55 @@ daxiapi stock capital-flow 600031 --days 10
 
 ---
 
+### SQL筛选
+
+```bash
+# 基础查询（查询指定日期的股票）
+daxiapi sql "date='2026-06-17' LIMIT 10"
+
+# 强势股筛选（RPS>70）
+daxiapi sql "date='2026-06-17' AND rps_score>70 ORDER BY rps_score DESC LIMIT 20"
+
+# 多条件组合（RPS>70、SCTR>60、CS>0）
+daxiapi sql "date='2026-06-17' AND rps_score>70 AND sctr>60 AND cs>0 ORDER BY rps_score DESC LIMIT 15"
+
+# 技术形态筛选（VCP形态）
+daxiapi sql "date='2026-06-17' AND isVCP=1 ORDER BY rps_score DESC LIMIT 20"
+
+# 区间范围查询（CS在0-15之间）
+daxiapi sql "date='2026-06-17' AND cs in [0, 15] ORDER BY cs DESC LIMIT 20"
+
+# 板块筛选（银行板块）
+daxiapi sql "date='2026-06-17' AND bkName='银行' AND rps_score>70 ORDER BY rps_score DESC LIMIT 20"
+```
+
+**SQL语法说明**：
+
+- **必须包含 `date` 条件**：所有查询必须指定日期，格式为 `date='YYYY-MM-DD'`
+- **日期限制**：只支持查询最近10天内的数据
+- **支持的运算符**：`=`, `!=`, `<>`, `>`, `<`, `>=`, `<=`, `in [...]`, `in (...)`
+- **逻辑运算符**：`AND`, `OR`，支持括号嵌套
+- **排序**：`ORDER BY field ASC/DESC`，支持多字段排序
+- **数量限制**：`LIMIT N`，限制返回数量
+
+**支持的查询字段**：
+
+| 字段类别 | 字段名 | 说明 |
+|---------|--------|------|
+| 日期 | `date` | 查询日期（必填） |
+| 基本信息 | `stockId`, `name` | 股票代码、名称 |
+| 涨跌幅 | `zdf`, `zdf_5d`, `zdf_10d`, `zdf_20d` | 当日、5日、10日、20日涨跌幅 |
+| 强度指标 | `cs`, `rps_score`, `sctr`, `sm`, `ml` | CS强度、RPS、SCTR、SM、ML |
+| 技术形态 | `isVCP`, `isSOS`, `isSpring`, `isNewHigh` | VCP、SOS、Spring、新高形态 |
+| 价格 | `close`, `open`, `high`, `low` | 收盘价、开盘价、最高价、最低价 |
+| 成交量 | `vol`, `amount` | 成交量、成交额 |
+| 市值 | `shizhi` | 总市值（亿元） |
+| 板块 | `bkName`, `bkCode` | 板块名称、板块代码 |
+
+**更多示例**：参考 [xiapi-stock-sql-screener Skill](../skills/xiapi-stock-sql-screener/SKILL.md)
+
+---
+
 ### 涨跌停
 
 ```bash

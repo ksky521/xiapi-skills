@@ -111,6 +111,10 @@ function createSharedMocks(overrides = {}) {
         getNewsReport: async (...args) => {
             apiCalls.push(['getNewsReport', ...args]);
             return {list: [{title: '研报标题', url: 'https://data.eastmoney.com/report/info/AP202603311820915189.html'}]};
+        },
+        querySqlStocks: async (...args) => {
+            apiCalls.push(['querySqlStocks', ...args]);
+            return [{ 代码: '000001', 名称: '平安银行', 涨跌幅: 1.2, CS: 12.3 }];
         }
     };
 
@@ -162,7 +166,7 @@ test('bin/index registers all commands and parses argv', () => {
     const invoked = [];
     const commandModules = {};
 
-    ['config', 'market', 'sector', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news'].forEach(
+    ['config', 'market', 'sector', 'sql', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news'].forEach(
         name => {
             commandModules[`../commands/${name}`] = currentProgram => {
                 invoked.push({name, currentProgram});
@@ -181,7 +185,7 @@ test('bin/index registers all commands and parses argv', () => {
     assert.equal(program.versionValue, '9.9.9');
     assert.deepEqual(
         invoked.map(item => item.name),
-        ['config', 'market', 'sector', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news']
+        ['config', 'market', 'sector', 'sql', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news']
     );
     assert.ok(invoked.every(item => item.currentProgram === program));
     assert.ok(Array.isArray(program.parsedArgv));
@@ -483,6 +487,32 @@ test('stock commands validate info, gn and pattern branches', async t => {
     await assert.rejects(() => getCommand(program, 'stock gn').actionFn('BK0428', {type: 'ths'}), assertExitError);
     await assert.rejects(() => getCommand(program, 'stock pattern').actionFn('vcp'), assertExitError);
     assert.equal(errorCalls.length, 8);
+});
+
+test('sql command parses SQL conditions and calls querySqlStocks', async t => {
+    const { mocks, apiCalls, outputCalls, errorCalls, configState } = createSharedMocks();
+    const program = createProgramMock();
+    loadWithMocks(projectPath('commands', 'sql.js'), mocks)(program);
+
+    await getCommand(program, 'sql').actionFn("date='2026-06-17' AND isVCP=1 LIMIT 10");
+
+    assert.equal(apiCalls.length, 1);
+    assert.equal(apiCalls[0][0], 'querySqlStocks');
+    assert.equal(apiCalls[0][1], 'token-123');
+    assert.ok(apiCalls[0][2].type === 'and');
+    assert.equal(apiCalls[0][4], 10);
+
+    assert.deepEqual(outputCalls[0], [{ 代码: '000001', 名称: '平安银行', 涨跌幅: 1.2, CS: 12.3 }]);
+
+    const exitStub = createExitStub();
+    t.after(() => exitStub.restore());
+
+    await assert.rejects(() => getCommand(program, 'sql').actionFn(''), assertExitError);
+    await assert.rejects(() => getCommand(program, 'sql').actionFn('invalid sql'), assertExitError);
+
+    configState.token = '';
+    await assert.rejects(() => getCommand(program, 'sql').actionFn("date='2026-06-17'"), assertExitError);
+    assert.equal(errorCalls.length, 3);
 });
 
 test('turnover and zdt commands expose formatted payloads and errors', async t => {

@@ -12,6 +12,7 @@ program
 require('../commands/config')(program);
 require('../commands/market')(program);
 require('../commands/sector')(program);
+require('../commands/sql')(program);
 require('../commands/stock')(program);
 require('../commands/kline')(program);
 require('../commands/zdt')(program);
