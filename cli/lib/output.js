@@ -8,9 +8,10 @@ function output(data) {
         console.log('[60]{"日期","分数","cs值","rsi值"}:');
 
         data.scores.forEach(item => {
-            const score = item.score != null ? item.score : '-';
-            const cs = item.cs != null ? item.cs : '-';
-            const rsi = item.rsi != null ? item.rsi : '-';
+            const value = input => (input ? input : '-');
+            const score = value(item.score);
+            const cs = value(item.cs);
+            const rsi = value(item.rsi);
             console.log(`  ${item.date},${score},${cs},${rsi}`);
         });
 

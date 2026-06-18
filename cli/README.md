@@ -16,7 +16,7 @@ npx daxiapi-cli@latest market index
 
 ## 配置
 
-首次使用需要配置 API Token（在 daxiapi.com 用户中心申请）：
+首次使用需要配置 API Token（在 daxiapi.com [用户中心](https://daxiapi.com/user.html) 申请）：
 
 ```bash
 # 方式一：配置文件（推荐）
@@ -61,6 +61,21 @@ daxiapi market style
 
 # 主要指数估值（PE、PB、估值温度、历史百分位）
 daxiapi market value
+```
+
+---
+
+### 龙虎榜
+
+```bash
+# 获取最新可用交易日的龙虎榜全部上榜股票
+daxiapi lhb
+
+# 获取指定交易日期的龙虎榜全部上榜股票
+daxiapi lhb --date 2026-06-17
+
+# 等价长命令
+daxiapi dragon-tiger-board --date 2026-06-17
 ```
 
 ---

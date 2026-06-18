@@ -90,7 +90,8 @@ function loadApiModule(overrides = {}) {
         './request': requestMock,
         './utils': {
             formatThsVolumeTime: data => overrides.formattedMinuteData || {dataTimestamp: 1700000000000},
-            isTradingNow: () => (overrides.isTradingNow === undefined ? false : overrides.isTradingNow)
+            isTradingNow: () => (overrides.isTradingNow === undefined ? false : overrides.isTradingNow),
+            formatSecucode: code => (String(code)[0] === '6' || String(code)[0] === '5' ? `${code}.SH` : `${code}.SZ`)
         },
         './dividendUtils': {
             calculateScores: input => {
@@ -137,6 +138,7 @@ test('lib/api wraps coze endpoints with expected paths and headers', async () =>
     await api.getGainianStock('token', 'BK0428', 'ths');
     await api.getKline('token', '000001');
     await api.getZdtPool('token', 'dt');
+    await api.getDragonTigerBoard('token', '2026-06-17');
     await api.getSecId('token', '000001');
     await api.queryStockData('token', '平安', 'bk');
     await api.getPatternStocks('token', 'vcp');
@@ -152,7 +154,8 @@ test('lib/api wraps coze endpoints with expected paths and headers', async () =>
         {method: 'get', path: '/get_bk_data'}
     ]);
     assert.deepEqual(clientCalls[5], {method: 'post', path: '/get_sector_data', body: {orderBy: 'zdf', lmt: 9}});
-    assert.deepEqual(clientCalls[14], {method: 'post', path: '/query_stock_data', body: {q: '平安', type: 'bk'}});
+    assert.deepEqual(clientCalls[13], {method: 'post', path: '/get_dragon_tiger_board', body: {date: '2026-06-17'}});
+    assert.deepEqual(clientCalls[15], {method: 'post', path: '/query_stock_data', body: {q: '平安', type: 'bk'}});
     assert.deepEqual(await api.getFinanceReportDetail('300014'), [{code: '300014', report: 'ok'}]);
 });
 
@@ -382,11 +385,13 @@ test('lib/api turnover helpers validate runtime branches and formatting', async 
             data: {charts: {point_list: [['2024-01-01', 1]]}}
         }
     );
+    const errorLog = captureConsole('error');
     await assert.rejects(() => badPointApi.api.getTurnoverData(), /数据不足/);
 
     const badMinuteApi = loadApiModule();
     badMinuteApi.requestResponses.push({status_code: 1});
     await assert.rejects(() => badMinuteApi.api.getTurnoverDataByMinute(), /数据格式错误/);
+    errorLog.restore();
 });
 
 test('lib/api news endpoints map URLs and params correctly', async () => {

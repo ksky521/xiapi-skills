@@ -16,6 +16,7 @@ require('../commands/sql')(program);
 require('../commands/stock')(program);
 require('../commands/kline')(program);
 require('../commands/zdt')(program);
+require('../commands/lhb')(program);
 require('../commands/secid')(program);
 require('../commands/search')(program);
 require('../commands/dividend')(program);

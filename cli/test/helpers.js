@@ -1,3 +1,6 @@
+const Module = require('module');
+const path = require('path');
+
 //#region src/constants.ts
 const LIST_ITEM_MARKER = '-';
 const LIST_ITEM_PREFIX = '- ';
@@ -2039,13 +2042,148 @@ function resolveDecodeOptions(options) {
 }
 
 //#endregion
+const rootDir = path.resolve(__dirname, '..');
+
+function projectPath(...segments) {
+    return path.join(rootDir, ...segments);
+}
+
+function loadWithMocks(filePath, mocks = {}) {
+    const realLoad = Module._load;
+    const resolvedPath = require.resolve(filePath);
+    delete require.cache[resolvedPath];
+
+    Module._load = function(request, parent, isMain) {
+        if (Object.prototype.hasOwnProperty.call(mocks, request)) {
+            return mocks[request];
+        }
+        return realLoad.apply(this, arguments);
+    };
+
+    try {
+        return require(resolvedPath);
+    } finally {
+        Module._load = realLoad;
+        delete require.cache[resolvedPath];
+    }
+}
+
+function parseCommandName(rawName) {
+    return String(rawName || '').trim().split(/\s+/)[0];
+}
+
+function createCommandMock(rawName) {
+    return {
+        rawName,
+        name: parseCommandName(rawName),
+        commands: [],
+        options: [],
+        arguments: [],
+        descriptionText: '',
+        aliasValue: '',
+        versionValue: '',
+        actionFn: null,
+        command(rawChildName) {
+            const command = createCommandMock(rawChildName);
+            this.commands.push(command);
+            return command;
+        },
+        description(value) {
+            this.descriptionText = value;
+            return this;
+        },
+        alias(value) {
+            this.aliasValue = value;
+            return this;
+        },
+        version(value) {
+            this.versionValue = value;
+            return this;
+        },
+        option(...args) {
+            this.options.push(args);
+            return this;
+        },
+        requiredOption(...args) {
+            this.options.push(args);
+            return this;
+        },
+        argument(...args) {
+            this.arguments.push(args);
+            return this;
+        },
+        action(fn) {
+            this.actionFn = fn;
+            return this;
+        }
+    };
+}
+
+function createProgramMock() {
+    const program = createCommandMock('');
+    program.name = value => {
+        program.commandName = value;
+        return program;
+    };
+    program.parse = argv => {
+        program.parsedArgv = argv || process.argv;
+        return program;
+    };
+    return program;
+}
+
+function getCommand(program, commandPath) {
+    const parts = String(commandPath || '').trim().split(/\s+/).filter(Boolean);
+    let current = program;
+    for (const part of parts) {
+        current = (current.commands || []).find(command => command.name === part || command.aliasValue === part);
+        if (!current) throw new Error(`Command not found: ${commandPath}`);
+    }
+    return current;
+}
+
+function captureConsole(method) {
+    const original = console[method];
+    const calls = [];
+    console[method] = (...args) => {
+        calls.push(args);
+    };
+    return {
+        calls,
+        restore() {
+            console[method] = original;
+        }
+    };
+}
+
+function createExitStub() {
+    const original = process.exit;
+    const calls = [];
+    process.exit = code => {
+        calls.push(code);
+        throw new Error(`process.exit:${code}`);
+    };
+    return {
+        calls,
+        restore() {
+            process.exit = original;
+        }
+    };
+}
+
 module.exports = {
     DEFAULT_DELIMITER,
     DELIMITERS,
+    captureConsole,
+    createExitStub,
+    createProgramMock,
     decode,
     decodeFromLines,
     decodeStream,
     decodeStreamSync,
     encode,
-    encodeLines
+    encodeLines,
+    getCommand,
+    loadWithMocks,
+    projectPath
 };

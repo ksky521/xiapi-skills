@@ -110,6 +110,13 @@ async function getZdtPool(token, type = 'zt') {
     return post(client, '/get_zdt_pool', {type});
 }
 
+async function getDragonTigerBoard(token, date = '') {
+    const client = createClient(token);
+    const body = {};
+    if (date) body.date = date;
+    return post(client, '/get_dragon_tiger_board', body);
+}
+
 async function getSecId(token, code) {
     const client = createClient(token);
     return post(client, '/get_sec_id', {code});
@@ -158,17 +165,21 @@ async function getCapitalFlow(code, days =10) {
     }
 
     const data = payload.result.data;
-    return data.map(item => ({
-            date: item.TRADE_DATE,
-            当日资金流入: item.CAPITAL_FLOWS,
-            '当日资金流入占比': item.CAPITAL_FLOWS_RATIO,
-            '5日资金流入金额': item.CAPITAL_FLOWS_5DAYS,
-            '5日资金流入占比': item.CAPITAL_FLOWS_5DAYSRATIO,
-            '板块资金流入': item.BOARD_CAPITAL_FLOWS,
-            '5日板块资金流入金额': item.BOARD_CAPITAL_5FLOWS,
-            '板块代码': item.BOARD_CODE,
-            '板块名称': item.BOARD_NAME,
+    return {
+        code: secucode,
+        total: payload.result.count || data.length,
+        list: data.map(item => ({
+            tradeDate: item.TRADE_DATE,
+            capitalFlows: item.CAPITAL_FLOWS,
+            capitalFlowsRatio: item.CAPITAL_FLOWS_RATIO,
+            capitalFlows5Days: item.CAPITAL_FLOWS_5DAYS,
+            capitalFlows5DaysRatio: item.CAPITAL_FLOWS_5DAYSRATIO,
+            boardCapitalFlows: item.BOARD_CAPITAL_FLOWS,
+            boardCapital5Flows: item.BOARD_CAPITAL_5FLOWS,
+            boardCode: item.BOARD_CODE,
+            boardName: item.BOARD_NAME
         }))
+    };
 }
 
 async function getPatternStocks(token, pattern) {
@@ -330,12 +341,14 @@ async function getTurnoverData(type = 'day') {
             if (isTrading) {
                 return {
                     是否正在盘中交易: isTrading ? '是' : '否',
+                    minuteData,
                     ...rs
                 };
             }
             return {
                 ...formattedData,
                 是否正在盘中交易: isTrading ? '是' : '否',
+                minuteData,
                 ...rs
             };
         }
@@ -512,6 +525,7 @@ module.exports = {
     getGainianStock,
     getKline,
     getZdtPool,
+    getDragonTigerBoard,
     getSecId,
     queryStockData,
     querySqlStocks,

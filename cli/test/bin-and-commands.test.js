@@ -100,6 +100,10 @@ function createSharedMocks(overrides = {}) {
             apiCalls.push(['getZdtPool', ...args]);
             return [{code: '000001', type: args[1]}];
         },
+        getDragonTigerBoard: async (...args) => {
+            apiCalls.push(['getDragonTigerBoard', ...args]);
+            return {date: args[1], items: [{stockCode: '000001'}]};
+        },
         getNewsSentiment: async (...args) => {
             apiCalls.push(['getNewsSentiment', ...args]);
             return {list: [{title: '舆情标题', url: 'https://finance.eastmoney.com/a/202604033694480758.html'}]};
@@ -166,7 +170,7 @@ test('bin/index registers all commands and parses argv', () => {
     const invoked = [];
     const commandModules = {};
 
-    ['config', 'market', 'sector', 'sql', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news'].forEach(
+    ['config', 'market', 'sector', 'sql', 'stock', 'kline', 'zdt', 'lhb', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news'].forEach(
         name => {
             commandModules[`../commands/${name}`] = currentProgram => {
                 invoked.push({name, currentProgram});
@@ -185,7 +189,7 @@ test('bin/index registers all commands and parses argv', () => {
     assert.equal(program.versionValue, '9.9.9');
     assert.deepEqual(
         invoked.map(item => item.name),
-        ['config', 'market', 'sector', 'sql', 'stock', 'kline', 'zdt', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news']
+        ['config', 'market', 'sector', 'sql', 'stock', 'kline', 'zdt', 'lhb', 'secid', 'search', 'dividend', 'hotrank', 'turnover', 'report', 'news']
     );
     assert.ok(invoked.every(item => item.currentProgram === program));
     assert.ok(Array.isArray(program.parsedArgv));
@@ -531,9 +535,17 @@ test('turnover and zdt commands expose formatted payloads and errors', async t =
     await getCommand(zdtProgram, 'zdt').actionFn({type: 'dt'});
     assert.deepEqual(zdtShared.outputCalls[0], [{code: '000001', type: 'dt'}]);
 
+    const lhbShared = createSharedMocks();
+    const lhbProgram = createProgramMock();
+    loadWithMocks(projectPath('commands', 'lhb.js'), lhbShared.mocks)(lhbProgram);
+    await getCommand(lhbProgram, 'lhb').actionFn({date: '2026-06-17'});
+    assert.deepEqual(lhbShared.apiCalls[0], ['getDragonTigerBoard', 'token-123', '2026-06-17']);
+    assert.deepEqual(lhbShared.outputCalls[0], {date: '2026-06-17', items: [{stockCode: '000001'}]});
+
     const exitStub = createExitStub();
     t.after(() => exitStub.restore());
     await assert.rejects(() => getCommand(zdtProgram, 'zdt').actionFn({type: 'bad'}), assertExitError);
+    await assert.rejects(() => getCommand(lhbProgram, 'lhb').actionFn({date: '20260617'}), assertExitError);
 
     const failingTurnover = createSharedMocks({
         '../lib/api': {
@@ -548,4 +560,5 @@ test('turnover and zdt commands expose formatted payloads and errors', async t =
     await assert.rejects(() => getCommand(failingTurnoverProgram, 'turnover').actionFn(), assertExitError);
     assert.equal(failingTurnover.errorCalls.length, 1);
     assert.equal(zdtShared.errorCalls.length, 1);
+    assert.equal(lhbShared.errorCalls.length, 1);
 });
