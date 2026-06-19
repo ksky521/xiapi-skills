@@ -46,6 +46,17 @@ daxiapi sql "date='2026-06-17' AND cs>0 ORDER BY cs DESC LIMIT 20"
 
 查询 CS>0 的强度股，按 CS 降序排序。
 
+## 趋势+距离52周高点回调20天以上
+```bash
+daxiapi sql "date='2026-06-17' AND close > ma150
+            AND ma150 > ma200
+            AND ma50 > ma150
+            AND ma50 > ma200
+            AND isMA200Up1M = 1
+            AND close > ma50
+            AND high_52w_days>20 ORDER BY sctr DESC LIMIT 20"
+```
+
 ### 多强度指标组合
 
 ```bash
