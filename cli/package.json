@@ -1,12 +1,14 @@
 {
     "name": "daxiapi-cli",
-    "version": "2.9.0",
+    "version": "3.0.0",
     "description": "虾皮金融数据API命令行工具，提供个股、选股、基本面等金融数据的查询和分析功能。",
     "bin": {
-        "daxiapi": "./bin/index.js",
-        "dxp": "./bin/index.js"
+        "daxiapi": "./dist/index.js",
+        "dxp": "./dist/index.js"
     },
     "scripts": {
+        "build": "webpack --config webpack.config.js",
+        "prepack": "npm run build",
         "test": "node --test test/*.test.js",
         "test:coverage": "node --test --experimental-test-coverage --test-coverage-branches=80 --test-coverage-functions=80 --test-coverage-lines=80 test/*.test.js"
     },
@@ -20,21 +22,23 @@
     "author": "daxiapi.com",
     "license": "MIT",
     "dependencies": {
-        "iconv-lite": "^0.5.0",
         "@ksky521/html-picker": "^1.0.0",
         "@toon-format/toon": "^2.3.0",
         "axios": "^1.6.0",
         "chalk": "^4.1.2",
         "commander": "^11.1.0",
-        "conf": "^10.2.0"
+        "conf": "^10.2.0",
+        "iconv-lite": "^0.5.0"
+    },
+    "devDependencies": {
+        "webpack": "^5.108.3",
+        "webpack-cli": "^5.1.4"
     },
     "engines": {
         "node": ">=14.0.0"
     },
     "files": [
-        "bin",
-        "commands",
-        "lib",
+        "dist",
         "README.md"
     ]
 }

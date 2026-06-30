@@ -1,0 +1,22 @@
+const {program} = require('commander');
+const pkg = require('../package.json');
+
+program.name('daxiapi').alias('dxp').version(pkg.version).description(pkg.description);
+
+require('../commands/config')(program);
+require('../commands/market')(program);
+require('../commands/sector')(program);
+require('../commands/sql')(program);
+require('../commands/stock')(program);
+require('../commands/kline')(program);
+require('../commands/zdt')(program);
+require('../commands/lhb')(program);
+require('../commands/secid')(program);
+require('../commands/search')(program);
+require('../commands/dividend')(program);
+require('../commands/hotrank')(program);
+require('../commands/turnover')(program);
+require('../commands/report')(program);
+require('../commands/news')(program);
+
+program.parse(process.argv);
