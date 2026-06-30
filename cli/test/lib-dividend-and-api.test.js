@@ -134,14 +134,14 @@ test('lib/api wraps coze endpoints with expected paths and headers', async () =>
     await api.getSectorRankStock('token', 'BK0428', 'sm');
     await api.getTopStocks('token');
     await api.getGnHot('token', 'dfcf');
-    await api.getStockData('token', ['000001']);
+    await api.getStockData('token', ['000001'], {mode: 'intraday'});
     await api.getGainianStock('token', 'BK0428', 'ths');
     await api.getKline('token', '000001');
     await api.getZdtPool('token', 'dt');
     await api.getDragonTigerBoard('token', '2026-06-17');
     await api.getSecId('token', '000001');
     await api.queryStockData('token', '平安', 'bk');
-    await api.getPatternStocks('token', 'vcp');
+    await api.getPatternStocks('token', 'vcp', {mode: 'intraday'});
     await api.getFinanceReportDetail('300014');
 
     assert.equal(createCalls[0].baseURL, 'https://mocked.example/coze');
@@ -154,8 +154,18 @@ test('lib/api wraps coze endpoints with expected paths and headers', async () =>
         {method: 'get', path: '/get_bk_data'}
     ]);
     assert.deepEqual(clientCalls[5], {method: 'post', path: '/get_sector_data', body: {orderBy: 'zdf', lmt: 9}});
+    assert.deepEqual(clientCalls[9], {
+        method: 'post',
+        path: '/get_stock_data',
+        body: {code: ['000001'], mode: 'intraday'}
+    });
     assert.deepEqual(clientCalls[13], {method: 'post', path: '/get_dragon_tiger_board', body: {date: '2026-06-17'}});
     assert.deepEqual(clientCalls[15], {method: 'post', path: '/query_stock_data', body: {q: '平安', type: 'bk'}});
+    assert.deepEqual(clientCalls[16], {
+        method: 'post',
+        path: '/get_pattern_stocks',
+        body: {pattern: 'vcp', mode: 'intraday'}
+    });
     assert.deepEqual(await api.getFinanceReportDetail('300014'), [{code: '300014', report: 'ok'}]);
 });
 

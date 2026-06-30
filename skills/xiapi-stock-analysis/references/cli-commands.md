@@ -42,6 +42,9 @@ npx daxiapi-cli@latest stock info <code>
 
 # 多股（最多20只，适合横向对比）
 npx daxiapi-cli@latest stock info <code1>,<code2>,<code3>
+
+# 盘中快照
+npx daxiapi-cli@latest stock info <code> --mode intraday
 ```
 
 **返回字段完整说明**：

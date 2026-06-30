@@ -90,9 +90,12 @@ async function getGnHot(token, type = 'ths') {
     return post(client, '/get_gn_hot', {type});
 }
 
-async function getStockData(token, codes) {
+async function getStockData(token, codes, options = {}) {
     const client = createClient(token);
-    return post(client, '/get_stock_data', {code: codes});
+    return post(client, '/get_stock_data', {
+        code: codes,
+        ...(options.mode ? {mode: options.mode} : {})
+    });
 }
 
 async function getGainianStock(token, gnId, type = 'ths') {
@@ -182,9 +185,12 @@ async function getCapitalFlow(code, days =10) {
     };
 }
 
-async function getPatternStocks(token, pattern) {
+async function getPatternStocks(token, pattern, options = {}) {
     const client = createClient(token);
-    return post(client, '/get_pattern_stocks', {pattern});
+    return post(client, '/get_pattern_stocks', {
+        pattern,
+        ...(options.mode ? {mode: options.mode} : {})
+    });
 }
 
 async function getDividendScore(token, code) {

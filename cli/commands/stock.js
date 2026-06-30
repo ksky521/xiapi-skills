@@ -45,7 +45,8 @@ module.exports = function (program) {
                 '返回股票名称、代码、涨跌幅、CS强度、SCTR排名、所属板块、概念、市值、成交额等详细数据。可用于个股分析和多只股票对比。'
         )
         .argument('<codes...>', '股票代码（支持多个）')
-        .action(async codes => {
+        .option('--mode <mode>', '数据模式：after-hours(盘后，默认) 或 intraday(盘中)', 'after-hours')
+        .action(async (codes, options = {}) => {
             try {
                 const token = config.getToken();
                 if (!token) {
@@ -62,7 +63,12 @@ module.exports = function (program) {
                     );
                 }
 
-                const data = await api.getStockData(token, codes);
+                const modeOptions = options.mode && options.mode !== 'after-hours'
+                    ? {mode: options.mode}
+                    : undefined;
+                const data = modeOptions
+                    ? await api.getStockData(token, codes, modeOptions)
+                    : await api.getStockData(token, codes);
                 output(data);
             } catch (error) {
                 handleError(error);
@@ -114,7 +120,8 @@ module.exports = function (program) {
                 '成交量形态类(fangliang/fangliangtupo)、涨跌幅排名类(zdf1dTop3等)、经典技术形态类(vcp/joc/sos/spring等)。' +
                 '返回符合指定形态的股票列表，包括代码、名称、涨幅、RPS、SCTR、CS强度等指标。可用于技术形态选股和量化策略筛选。'
         )
-        .action(async pattern => {
+        .option('--mode <mode>', '选股模式：after-hours(盘后，默认) 或 intraday(盘中)', 'after-hours')
+        .action(async (pattern, options = {}) => {
             try {
                 const token = config.getToken();
                 if (!token) {
@@ -135,7 +142,12 @@ module.exports = function (program) {
                     );
                 }
 
-                const data = await api.getPatternStocks(token, pattern);
+                const modeOptions = options.mode && options.mode !== 'after-hours'
+                    ? {mode: options.mode}
+                    : undefined;
+                const data = modeOptions
+                    ? await api.getPatternStocks(token, pattern, modeOptions)
+                    : await api.getPatternStocks(token, pattern);
                 output(data);
             } catch (error) {
                 handleError(error);

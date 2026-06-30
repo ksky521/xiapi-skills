@@ -464,18 +464,24 @@ test('stock commands validate info, gn and pattern branches', async t => {
     loadWithMocks(projectPath('commands', 'stock.js'), mocks)(program);
 
     await getCommand(program, 'stock info').actionFn(['000001', '600031']);
+    await getCommand(program, 'stock info').actionFn(['000001'], {mode: 'intraday'});
     await getCommand(program, 'stock gn').actionFn('BK0428', {type: 'dfcf'});
     await getCommand(program, 'stock pattern').actionFn('vcp');
+    await getCommand(program, 'stock pattern').actionFn('rps', {mode: 'intraday'});
 
     assert.deepEqual(apiCalls, [
         ['getStockData', 'token-123', ['000001', '600031']],
+        ['getStockData', 'token-123', ['000001'], {mode: 'intraday'}],
         ['getGainianStock', 'token-123', 'BK0428', 'dfcf'],
-        ['getPatternStocks', 'token-123', 'vcp']
+        ['getPatternStocks', 'token-123', 'vcp'],
+        ['getPatternStocks', 'token-123', 'rps', {mode: 'intraday'}]
     ]);
     assert.deepEqual(outputCalls, [
         [{code: '000001', name: '平安银行', zdf: 1.2}],
+        [{code: '000001', name: '平安银行', zdf: 1.2}],
         [{code: '300750', name: '宁德时代'}],
-        [{code: '000001', name: '平安银行', pattern: 'vcp'}]
+        [{code: '000001', name: '平安银行', pattern: 'vcp'}],
+        [{code: '000001', name: '平安银行', pattern: 'rps'}]
     ]);
 
     const exitStub = createExitStub();

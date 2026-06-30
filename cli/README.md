@@ -145,6 +145,9 @@ daxiapi stock info 000001
 # 批量查询（最多20只，空格或逗号分隔）
 daxiapi stock info 000001 600031 300750
 
+# 查询盘中快照
+daxiapi stock info 000001 --mode intraday
+
 # 查询概念板块成分股（同花顺板块ID）
 daxiapi stock gn 881273
 
@@ -155,6 +158,9 @@ daxiapi stock gn BK0428 --type dfcf
 daxiapi stock pattern vcp
 daxiapi stock pattern rps
 daxiapi stock pattern newHigh
+
+# 盘中形态选股
+daxiapi stock pattern vcp --mode intraday
 
 # 个股主力资金流向（默认5天）
 daxiapi stock capital-flow 600031
